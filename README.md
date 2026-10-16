@@ -45,7 +45,7 @@ edits — but skipping keeps this tool from moving a working tree that has unsav
 
 Needs Python 3.11 or newer, and `git` on your `PATH`.
 
-From a checkout, using a virtual environment:
+### From a checkout
 
 ```console
 $ cd path/to/git-wombat
@@ -57,7 +57,32 @@ $ git-wombat --help
 
 On Windows the activation is `.venv\Scripts\activate`.
 
-Without a virtual environment:
+`-e` installs in editable mode, so the command runs the code in your checkout and edits take effect
+without reinstalling. Drop it for a plain install, which copies the code into the environment.
+
+To get the test suite as well:
+
+```console
+$ pip install -e ".[dev]"
+```
+
+If `python3 -m venv` fails with `ensurepip is not available`, your Python is missing the venv module —
+on Debian and Ubuntu that is `apt install python3.14-venv`, matching your version. The environment has
+to be rebuilt afterwards. The uv route below avoids needing it at all.
+
+### With uv
+
+[uv](https://docs.astral.sh/uv/) builds the same environment in one step, without touching the system
+Python:
+
+```console
+$ cd path/to/git-wombat
+$ uv venv
+$ uv pip install -e .
+$ .venv/bin/git-wombat --help
+```
+
+### Without a virtual environment
 
 ```console
 $ pip install --user -e .
@@ -88,6 +113,34 @@ $ git-wombat local ~/src --no-fetch | head
 ```
 
 A run over a directory of real repositories should print a report and exit 0.
+
+### When the venv breaks
+
+```console
+$ .venv/bin/git-wombat local ~/src
+zsh: bad interpreter: /home/you/src/git-wombat/.venv/bin/python3.11: no such file or directory
+```
+
+The environment is intact; its Python is gone. Every script installed into `.venv/bin` — `git-wombat`,
+`pytest`, `pip` — starts with the absolute path of the interpreter that created the environment. Once
+that interpreter is uninstalled, upgraded or switched (`pyenv` or `uv` changing versions, a Homebrew
+upgrade, the Python macOS ships changing), all of them fail the same way, and activating the
+environment does not help.
+
+Rebuild it. Nothing in `.venv` is unique — its contents come from `pyproject.toml`, plus anything you
+installed into it by hand, which is worth listing first if you have:
+
+```console
+$ .venv/bin/pip list
+$ rm -rf .venv
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+$ pip install -e .
+```
+
+If the version named in the error is one you no longer want — `python3.11` when you are on
+`python3.13` — then `python3 -m venv .venv` builds the same broken environment again. Check what
+`python3` resolves to with `python3 --version`, or pin the version: `uv venv --python 3.13`.
 
 ## Three questions, three commands
 
@@ -284,6 +337,8 @@ $ diff ~/reports/yesterday.md ~/reports/today.md
 ```
 
 ## Development
+
+Assuming the environment from [Install](#install):
 
 ```console
 $ pip install -e ".[dev]"

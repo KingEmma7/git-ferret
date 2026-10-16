@@ -28,7 +28,7 @@ from git_wombat.gitcmd import run_git
 from git_wombat.gitops import (
     base_ref_is_remote,
     fetch_all,
-    fetch_head_mtime,
+    refs_updated_at,
     list_branches,
 )
 from git_wombat.models import Finding, RepoReport, Status
@@ -125,7 +125,7 @@ def _new_report(repo: Path, base_ref: str | None, do_fetch: bool) -> RepoReport:
         report.fetch_failed = not ok
         report.fetched_at = when
     else:
-        report.fetched_at = fetch_head_mtime(repo)
+        report.fetched_at = refs_updated_at(repo)
     if base_ref is None:
         report.skipped_reason = NO_BASE_REASON
         report.findings.append(

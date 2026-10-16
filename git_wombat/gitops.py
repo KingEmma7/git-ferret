@@ -34,19 +34,49 @@ def fetch_all(repo: Path) -> tuple[bool, datetime | None]:
     return True, fetch_head_mtime(repo)
 
 
+def _git_dir(repo: Path) -> Path:
+    git_dir = Path(run_git_text(repo, "rev-parse", "--git-dir"))
+    return git_dir if git_dir.is_absolute() else repo / git_dir
+
+
 def fetch_head_mtime(repo: Path) -> datetime | None:
-    """Modification time of ``.git/FETCH_HEAD``, or ``None`` if never fetched.
+    """Modification time of ``.git/FETCH_HEAD``, or ``None`` if it is absent.
 
     Only a cross-run timestamp can support a meaningful staleness warning;
     "time since this run" would render as zero on every heading.
     """
-    git_dir = Path(run_git_text(repo, "rev-parse", "--git-dir"))
-    if not git_dir.is_absolute():
-        git_dir = repo / git_dir
-    fetch_head = git_dir / "FETCH_HEAD"
+    fetch_head = _git_dir(repo) / "FETCH_HEAD"
     if not fetch_head.exists():
         return None
     return datetime.fromtimestamp(fetch_head.stat().st_mtime)
+
+
+def refs_updated_at(repo: Path) -> datetime | None:
+    """When the remote-tracking refs were last written, or ``None``.
+
+    ``git clone`` writes remote-tracking refs but no ``FETCH_HEAD``, so relying on
+    that file alone labels every freshly cloned repository "never fetched" --
+    a false staleness signal on the freshest state possible. The refs are the
+    thing actually being read, so their write time is the honest answer.
+
+    ``packed-refs`` counts too, since ``git gc`` moves loose refs into it.
+    """
+    git_dir = _git_dir(repo)
+    newest: float | None = None
+
+    candidates = [git_dir / "FETCH_HEAD", git_dir / "packed-refs"]
+    remotes = git_dir / "refs" / "remotes"
+    if remotes.is_dir():
+        candidates.extend(p for p in remotes.rglob("*") if p.is_file())
+
+    for path in candidates:
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            continue
+        if newest is None or mtime > newest:
+            newest = mtime
+    return datetime.fromtimestamp(newest) if newest is not None else None
 
 
 def resolve_base_ref(repo: Path) -> str | None:

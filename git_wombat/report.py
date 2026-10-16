@@ -44,9 +44,9 @@ def _render_repo(report: RepoReport) -> list[str]:
         else:
             meta.append(f"fetched {stamp}")
     elif report.fetch_failed:
-        meta.append("fetch failed; analysed from stale local state")
+        meta.append("fetch failed; no local refs to analyse")
     else:
-        meta.append("never fetched")
+        meta.append("no commits yet")
 
     if report.base_ref:
         meta.append(f"base: {report.base_ref}")

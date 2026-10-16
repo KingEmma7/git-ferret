@@ -204,12 +204,17 @@ def test_fetch_records_timestamp(tmp_path):
 
 
 def test_no_fetch_leaves_timestamp_from_prior_fetch(tmp_path):
+    from tests.helpers import clone_local
+
     src = make_repo(tmp_path / "src")
     (src / "f.txt").write_text("a\n")
     commit(src, "base")
-    from tests.helpers import clone_local
-
     clone = clone_local(src, tmp_path / "clone")
-    assert _report(clone, Config(), False).fetched_at is None
-    assert _report(clone, Config(), True).fetched_at is not None
+
+    # A clone writes remote-tracking refs, so even before any fetch there is a
+    # real timestamp for the state being read.
+    before = _report(clone, Config(), False).fetched_at
+    assert before is not None
+    after_fetch = _report(clone, Config(), True).fetched_at
+    assert after_fetch is not None
     assert _report(clone, Config(), False).fetched_at is not None

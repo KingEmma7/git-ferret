@@ -25,13 +25,69 @@ Without that flag, every command is read-only. There is no code path that delete
 commits, resets, or rewrites anything — you can audit a directory of real repositories without
 touching them.
 
-## Install
+`--update` fast-forwards worktrees that are clean and behind their upstream, and reports what it
+did:
 
-```console
-$ pip install -e .
+```markdown
+## fast-forwarded
+
+- api-server: `feat/new-auth` — [OK] fast-forwarded
+- web-app: `main` — [OK] already up to date
+- worker: `wip` — [DIRTY] skipped: uncommitted changes (git could fast-forward these, if they do not overlap)
 ```
 
+A worktree with uncommitted changes is skipped rather than updated. Git would in fact allow that
+when the incoming changes touch different files — it refuses only when they would overwrite your
+edits — but skipping keeps this tool from moving a working tree that has unsaved work, and it keeps
+`skipped: uncommitted changes` in the report as a reminder that the worktree holds something.
+
+## Install
+
 Needs Python 3.11 or newer, and `git` on your `PATH`.
+
+From a checkout, using a virtual environment:
+
+```console
+$ cd path/to/git-wombat
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+$ pip install -e .
+$ git-wombat --help
+```
+
+On Windows the activation is `.venv\Scripts\activate`.
+
+Without a virtual environment:
+
+```console
+$ pip install --user -e .
+```
+
+Or with pipx, which keeps the tool and its dependencies in their own environment
+and puts `git-wombat` on your `PATH` directly:
+
+```console
+$ pipx install -e .
+```
+
+### Running it without installing
+
+Useful while working on the code, or if you would rather not put it on your
+`PATH`:
+
+```console
+$ .venv/bin/git-wombat local ~/src          # explicit path
+$ source .venv/bin/activate
+$ git-wombat local ~/src                    # once activated
+```
+
+### Check your install
+
+```console
+$ git-wombat local ~/src --no-fetch | head
+```
+
+A run over a directory of real repositories should print a report and exit 0.
 
 ## Three questions, three commands
 
@@ -211,9 +267,16 @@ locally, and reporting that as a conflict would invent a problem you do not have
 
 ## Using it regularly
 
-Findings alone do not change the exit code, so a weekly cron job can alert on *new* findings by
-diffing two reports rather than on exit status. A path that is not a directory exits 1; an
-unrecognised command exits 2. A repository you cannot read is reported and skipped, not fatal.
+Findings alone never change the exit code, so a weekly cron job can alert on *new* findings by
+diffing two reports rather than on exit status.
+
+| Exit code | Meaning |
+|---|---|
+| `0` | The run completed. Findings do **not** change this. |
+| `1` | Usage error — unknown command or flag, or a path that is not a directory. |
+| `2` | Reserved for a failure that stopped the run before completing. |
+
+A repository that cannot be read is reported and skipped, not fatal.
 
 ```console
 $ git-wombat local ~/src --no-fetch > ~/reports/$(date +%F).md

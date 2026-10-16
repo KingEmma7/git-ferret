@@ -108,5 +108,13 @@ def test_empty_report_list_still_renders_header():
 
 def test_fetch_failure_is_flagged():
     rep = _repo(fetch_failed=True)
-    out = render_report([rep], stale_count=0)
+    out = render_report([rep], stale_count=1)
+    assert "fetch failed" in out
+    # A failed fetch means the run is reading state it could not refresh.
     assert "stale" in out.lower()
+
+
+def test_fetch_failure_without_a_timestamp_says_so():
+    rep = _repo(fetch_failed=True)
+    out = render_report([rep], stale_count=1)
+    assert "no local refs" in out

@@ -7,7 +7,12 @@ from pathlib import Path
 from git_wombat.config import Config
 from git_wombat.discovery import list_worktrees
 from git_wombat.gitcmd import run_git, run_git_text
-from git_wombat.gitops import fetch_all, fetch_head_mtime, list_branches, stash_entries
+from git_wombat.gitops import (
+    fetch_all,
+    list_branches,
+    refs_updated_at,
+    stash_entries,
+)
 from git_wombat.models import BranchInfo, Finding, RepoReport, Status, WorktreeInfo
 
 EMOJI_OK = "✓"
@@ -123,7 +128,7 @@ def analyse_local(
     # Always stamp the age of the last successful fetch, whether or not this
     # call fetched. Without this a --no-fetch run reports no time at all, so
     # stale state becomes indistinguishable from fresh state.
-    report.fetched_at = fetch_head_mtime(repo)
+    report.fetched_at = refs_updated_at(repo)
 
     for path, branch_name in list_worktrees(repo):
         dirty, detail = worktree_status(path)

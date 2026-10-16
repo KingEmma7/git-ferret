@@ -107,24 +107,13 @@ def test_successful_fetch_is_not_reported_stale(tmp_path, capsys):
 
 
 def test_missing_path_is_a_usage_error(tmp_path):
-    from git_wombat.cli import main
+    # The exit code is asserted end to end in test_freshness_and_exit.py
+    # against the real entry point; this only pins that the command refuses
+    # rather than degrading to an empty, exit-0 report.
+    from git_wombat.cli import UsageError, _resolve_root
 
-    with pytest.raises(SystemExit) as exc:
-        main_for(["local", str(tmp_path / "nope"), "--no-fetch"])
-    assert exc.value.code == 1
-
-
-def main_for(argv):
-    import sys
-
-    from git_wombat.cli import app
-
-    old = sys.argv
-    sys.argv = ["git-wombat", *argv]
-    try:
-        app()
-    finally:
-        sys.argv = old
+    with pytest.raises(UsageError):
+        _resolve_root(tmp_path / "nope")
 
 
 def test_report_records_whether_fetch_was_attempted():

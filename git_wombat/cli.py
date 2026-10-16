@@ -25,7 +25,7 @@ from git_wombat.analysis.remote import (
 from git_wombat.config import Config, resolve_identities
 from git_wombat.discovery import discover_repos, list_worktrees
 from git_wombat.gitcmd import GitError, run_git
-from git_wombat.gitops import fetch_all, resolve_base_ref
+from git_wombat.gitops import fetch_all, refs_updated_at, resolve_base_ref
 from git_wombat.models import RepoReport
 from git_wombat.report import display_path, emit, render_header, render_repo
 
@@ -52,23 +52,29 @@ def local(
     config = Config.load()
     root = _resolve_root(path)
     updated: list[tuple[Path, str]] = []
-    header_state = [False]
 
-    for repo in discover_repos(root):
-        attempted, failed = _fetch_report(repo, no_fetch)
+    repos = discover_repos(root)
+    # Fetch every repository before writing anything. The stale warning names
+    # how many of how many this run could not refresh, and that count is only
+    # knowable once every fetch has been attempted; deciding it from the first
+    # repository reported "1 of 1" for any run and missed a stale repo that was
+    # not first.
+    fetch_state = _fetch_every(repos, no_fetch)
+    emit(render_header(*_stale_counts(repos, fetch_state)))
+
+    for repo in repos:
         base_ref = resolve_base_ref(repo)
         try:
             report = analyse_local(repo, config, base_ref)
         except (GitError, OSError, subprocess.SubprocessError) as exc:
             _warn(f"error analysing {repo}: {exc}")
             continue
-        report.fetch_attempted = attempted
-        report.fetch_failed = failed
+        _stamp_fetch(report, fetch_state[repo])
         report_remote_health(repo, report)
         if update:
             updated.extend((repo, branch)
                            for branch in fast_forward_worktrees(repo))
-        _emit_one(report, root, header_state)
+        emit(render_repo(report, root))
 
     _emit_summary(updated, root)
 
@@ -143,17 +149,53 @@ def _fetch_report(repo: Path, no_fetch: bool) -> tuple[bool, bool]:
     return True, not ok
 
 
+def _fetch_every(repos: list[Path], no_fetch: bool) -> dict[Path, tuple[bool, bool]]:
+    """Fetch every repository, so the header can describe the whole run."""
+    return {repo: _fetch_report(repo, no_fetch) for repo in repos}
+
+
+def _stamp_fetch(report: RepoReport, fetch: tuple[bool, bool]) -> None:
+    """Record the run's fetch outcome on *report*, for the heading and warning."""
+    report.fetch_attempted, report.fetch_failed = fetch
+
+
+def _stale_counts(
+    repos: list[Path], fetch_state: dict[Path, tuple[bool, bool]]
+) -> tuple[int, int]:
+    """``(stale, total)`` for the top warning, over the whole run.
+
+    Staleness is the report's own rule (nothing refreshed this run), evaluated
+    from the fetch outcome and the on-disk refs rather than from any one
+    repository's heading.
+    """
+    stale = sum(
+        1
+        for repo in repos
+        if RepoReport(
+            path=repo,
+            fetch_attempted=fetch_state[repo][0],
+            fetch_failed=fetch_state[repo][1],
+            fetched_at=refs_updated_at(repo),
+        ).is_stale
+    )
+    return stale, len(repos)
+
+
 def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
          branch_filter: str | None) -> None:
     config = Config.load()
     root = _resolve_root(path)
-    header_state = [False]
 
-    for repo in discover_repos(root):
-        # Fetch BEFORE resolving the base ref. Resolving first would judge a
+    repos = discover_repos(root)
+    # Fetch every repository first (see `local`): the stale warning's count is a
+    # property of the run, not of whichever repository happens to be first.
+    fetch_state = _fetch_every(repos, no_fetch)
+    emit(render_header(*_stale_counts(repos, fetch_state)))
+
+    for repo in repos:
+        # Base ref resolved AFTER the fetch above. Resolving first would judge a
         # branch against a local `main` that this run's own fetch is about to
         # supersede, reporting live branches as unmerged.
-        attempted, failed = _fetch_report(repo, no_fetch)
         base_ref = resolve_base_ref(repo)
         identities = resolve_identities(author or [], config, repo)
         try:
@@ -161,10 +203,9 @@ def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
         except (GitError, OSError, subprocess.SubprocessError) as exc:
             _warn(f"error analysing {repo}: {exc}")
             continue
-        report.fetch_attempted = attempted
-        report.fetch_failed = failed
+        _stamp_fetch(report, fetch_state[repo])
         report_remote_health(repo, report)
-        _emit_one(report, root, header_state)
+        emit(render_repo(report, root))
 
     _emit_summary([], root)
 
@@ -174,27 +215,6 @@ def run_command(command: str, path: Path, no_fetch: bool,
                 branch_filter: str | None = None) -> None:
     """Run one named subcommand's analysis over *path*."""
     _run(ANALYSES[command], path, no_fetch, author or [], branch_filter)
-
-
-def _emit_one(report: RepoReport, root: Path, header_state: list[bool]) -> None:
-    """Stream one repository's section as soon as it is produced.
-
-    The document header and the staleness warning are emitted once, on the
-    first repository, rather than repeated above every section. Staleness is
-    marked per repository in the heading itself, so nothing is lost.
-
-    The flag lives in a caller-owned list rather than a module global: a global
-    would leave it set after the first run, so a second invocation in the same
-    process would emit no header and, with it, no staleness warning at all.
-
-    Sections are emitted from ``render_repo`` directly rather than by slicing a
-    whole-document render: the document strips its trailing blank line, so
-    reusing it per repository ran every section into the next one.
-    """
-    if not header_state[0]:
-        header_state[0] = True
-        emit(render_header(1 if report.is_stale else 0, total=1))
-    emit(render_repo(report, root))
 
 
 def _emit_summary(updated: list, root: Path) -> None:

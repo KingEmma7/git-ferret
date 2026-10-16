@@ -457,7 +457,7 @@ fetched 2026-10-16 09:41:02 · base: origin/main
 - 📍 `../api-server-hotfix` [DETACHED] clean
 
 ## web-app
-no commits yet · skipped: no base branch (neither origin/main nor origin/master)
+never fetched · skipped: no base branch (neither origin/main nor origin/master)
 
 - ✏️ `.` [DIRTY] 4 files modified, 1 untracked
 ```

@@ -91,7 +91,7 @@ def _header_line(report: RepoReport) -> str:
     elif report.fetch_failed:
         parts.append("fetch failed; no local refs to analyse")
     else:
-        parts.append("no commits yet")
+        parts.append("never fetched")
 
     if report.base_ref:
         parts.append(f"base: {report.base_ref}")

@@ -202,7 +202,18 @@ def test_a_skip_reason_shares_the_header_line():
     rep = RepoReport(path=Path("/tmp/web"), base_ref=None,
                      skipped_reason="no base branch")
     out = render_report([rep], stale_count=0)
-    assert "## /tmp/web\nno commits yet · skipped: no base branch\n" in out
+    assert "## /tmp/web\nnever fetched · skipped: no base branch\n" in out
+
+
+def test_a_repo_that_was_never_fetched_is_not_called_empty():
+    # fetched_at is None means there are no refs to date the state, which is a
+    # local-only repository, not one without commits. "no commits yet" used to
+    # contradict the `base: main` printed right beside it.
+    rep = RepoReport(path=Path("/tmp/local"), base_ref="main", fetched_at=None,
+                     fetch_attempted=False)
+    out = render_report([rep], stale_count=1)
+    assert "no commits yet" not in out
+    assert "never fetched" in out
 
 
 def test_stale_warning_is_separated_from_the_first_repo():
@@ -286,7 +297,7 @@ def test_screen_shows_a_skip_reason_where_the_file_does():
     lines = _on_screen(render_repo(rep))
     # Screen and file carry the same words, and the newline between them is
     # still a newline rather than a space.
-    assert lines[1] == "no commits yet · skipped: no base branch"
+    assert lines[1] == "never fetched · skipped: no base branch"
     assert lines[2] == ""
 
 

@@ -71,16 +71,22 @@ def merge_verdict(repo: Path, base_ref: str, branch_ref: str) -> MergeVerdict:
 def remote_branches(repo: Path) -> list[str]:
     """Every remote-tracking branch ref, across all remotes.
 
-    ``origin/HEAD`` is dropped: it is a symref to the default branch, not a
-    branch of its own.
+    Full ref names are used deliberately: ``%(refname:short)`` renders
+    ``refs/remotes/origin/HEAD`` as bare ``origin``, which is indistinguishable
+    from a remote named "origin" and would appear as a phantom branch.
+
+    The ``HEAD`` symref is dropped: it points at the default branch rather than
+    being a branch of its own.
     """
-    output = run_git_text(repo, "for-each-ref", "--format=%(refname:short)",
+    output = run_git_text(repo, "for-each-ref", "--format=%(refname)",
                           "refs/remotes/")
-    return [
-        line.strip()
-        for line in output.splitlines()
-        if line.strip() and line.strip() != "origin/HEAD"
-    ]
+    refs = []
+    for line in output.splitlines():
+        ref = line.strip()
+        if not ref or ref.endswith("/HEAD"):
+            continue
+        refs.append(ref.removeprefix("refs/remotes/"))
+    return refs
 
 
 def commits_in_range(repo: Path, base_ref: str, branch_ref: str) -> list[str]:

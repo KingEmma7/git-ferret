@@ -121,7 +121,16 @@ def test_remote_branches_lists_origin_refs(tmp_path):
 
 def test_remote_branches_excludes_head_symref(tmp_path):
     _src, clone = _clone_with_feature(tmp_path)
-    assert "origin/HEAD" not in remote_branches(clone)
+    refs = remote_branches(clone)
+    assert "origin/HEAD" not in refs
+    # %(refname:short) renders refs/remotes/origin/HEAD as bare "origin",
+    # which would otherwise show up as a phantom branch.
+    assert "origin" not in refs
+
+
+def test_remote_branches_returns_no_phantom_remote_entry(tmp_path):
+    _src, clone = _clone_with_feature(tmp_path)
+    assert all("/" in ref for ref in remote_branches(clone))
 
 
 def test_commits_in_range_excludes_base_history(tmp_path):

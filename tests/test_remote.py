@@ -3,6 +3,7 @@ from git_wombat.analysis.remote import (
     analyse_merged_candidates,
     analyse_remote,
     local_branch_unpushed,
+    local_branch_unpushed_map,
 )
 from git_wombat.config import Config
 from git_wombat.gitops import resolve_base_ref
@@ -118,6 +119,30 @@ def test_merged_branch_marked_unsafe_when_local_unpushed(tmp_path):
 def test_local_branch_unpushed_false_when_branch_absent(tmp_path):
     clone = _merged_repo(tmp_path)
     assert local_branch_unpushed(clone, "no-such-branch") is False
+
+
+def test_local_branch_with_no_upstream_counts_as_unpushed(tmp_path):
+    # A branch that was never pushed has no upstream, so `ahead` cannot be
+    # computed and reads as 0. It still holds work that exists nowhere else,
+    # which is exactly what the deletion gate exists to protect.
+    clone = _merged_repo(tmp_path)
+    run(clone, "branch", "--no-track", "done", "origin/done")
+    assert local_branch_unpushed_map(clone)["done"] is True
+
+
+def test_merged_branch_unsafe_when_local_branch_has_no_upstream(tmp_path):
+    # The remote branch is merged, but the local branch of the same name was
+    # never pushed. Recommending deletion here would lose the local work.
+    clone = _merged_repo(tmp_path)
+    run(clone, "branch", "--no-track", "done", "origin/done")
+    run(clone, "checkout", "done")
+    (clone / "local-only.txt").write_text("mine\n")
+    commit(clone, "local only")
+
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
+    f = next(x for x in rep.findings if x.branch == "origin/done")
+    assert f.status is Status.UNSAFE_TO_DELETE
+    assert "unpushed" in f.detail.lower()
 
 
 def test_merged_unmerged_branch_is_not_safe(tmp_path):

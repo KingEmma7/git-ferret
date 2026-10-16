@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from git_wombat.analysis.local import NO_BASE_REASON
+from git_wombat.analysis.local import NO_BASE_REASON, branch_status_is_clean
 from git_wombat.analysis.merged import (
     MergeVerdict,
     branch_name_from_ref,
@@ -40,14 +40,19 @@ _STATUS_FOR_VERDICT = {
 
 
 def local_branch_unpushed_map(repo: Path) -> dict[str, bool]:
-    """``{branch: has unpushed work}`` for every local branch, in one pass.
+    """``{branch: holds unpushed work}`` for every local branch, in one pass.
 
     Taken once per run rather than per candidate: re-listing branches for each
     remote branch is quadratic, and the branches this tool reports are exactly
     the merged ones, so the cost lands on the hot path.
+
+    "Unpushed" is the negation of a clean branch, which includes a branch with
+    no upstream at all. Such a branch has no ``ahead`` count (there is nothing
+    to compare against) but still holds work that exists nowhere on the remote,
+    which is precisely what this gate exists to protect.
     """
     return {
-        b.name: (b.ahead > 0 or b.upstream_gone)
+        b.name: not branch_status_is_clean(b)
         for b in list_branches(repo)
     }
 
@@ -57,7 +62,8 @@ def local_branch_unpushed(repo: Path, branch: str) -> bool:
 
     This is the gate that keeps the tool from recommending deletion of a remote
     branch while the user's local copy of the same name carries commits that
-    exist nowhere else.
+    exist nowhere else. A branch with no configured upstream counts as unpushed:
+    the remote tells us nothing about where its work lives.
     """
     if run_git(repo, "rev-parse", "--verify", "--quiet",
                f"refs/heads/{branch}").returncode != 0:
@@ -65,7 +71,7 @@ def local_branch_unpushed(repo: Path, branch: str) -> bool:
     info = {b.name: b for b in list_branches(repo)}.get(branch)
     if info is None:
         return False
-    return info.ahead > 0 or info.upstream_gone
+    return not branch_status_is_clean(info)
 
 
 def _candidate_refs(

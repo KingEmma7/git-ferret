@@ -1,8 +1,8 @@
 """Finding the repositories to audit, and the worktrees inside each one.
 
 Discovery stops descending at the first repository it finds. A personal
-collection routinely contains nested checkouts — a dotfiles repo with cloned
-plugins, a vendored dependency — and walking into them would fetch and report
+collection routinely contains nested checkouts (a dotfiles repo with cloned
+plugins, a vendored dependency), and walking into them would fetch and report
 the same tree twice.
 """
 

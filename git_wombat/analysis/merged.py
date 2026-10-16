@@ -60,8 +60,8 @@ def merge_verdict(repo: Path, base_ref: str, branch_ref: str) -> MergeVerdict:
         )
     if proc.returncode == CONFLICT_EXIT:
         # A genuine conflict prints the merged tree and then the conflicted
-        # paths. A ref that cannot be resolved — the usual case in a shallow
-        # clone — also exits 1 but prints nothing at all, and calling that a
+        # paths. A ref that cannot be resolved, the usual case in a shallow
+        # clone, also exits 1 but prints nothing at all, and calling that a
         # conflict would fabricate a verdict about a branch we could not read.
         if proc.stdout.strip():
             return MergeVerdict.CONFLICTS

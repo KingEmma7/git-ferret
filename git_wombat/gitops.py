@@ -138,7 +138,7 @@ def configured_upstream(repo: Path, branch: str) -> tuple[str | None, str | None
 
     ``%(upstream:short)`` is empty for a deleted upstream, so the configured
     pair has to come from git config directly. A branch whose upstream was
-    deleted still *has* an upstream — that is a different finding from having
+    deleted still *has* an upstream, which is a different finding from having
     none, and conflating them hides the very thing this tool reports.
     """
     remote = run_git(repo, "config", "--get", f"branch.{branch}.remote")
@@ -155,7 +155,7 @@ def list_branches(repo: Path) -> list[BranchInfo]:
     """Every local branch, with its upstream relationship.
 
     A branch whose upstream ref is gone still has a configured upstream, so it
-    is not "no upstream" — it is a deleted upstream, which is a different
+    is not "no upstream": it is a deleted upstream, which is a different
     finding and the reason pruning matters.
     """
     names = run_git_text(repo, "for-each-ref", "--format=%(refname:short)",

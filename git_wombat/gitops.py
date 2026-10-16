@@ -1,0 +1,154 @@
+"""Git operations that back the analyses: fetch, base refs, branch state.
+
+Nothing here decides anything about what to report; it only asks git questions
+and returns answers. The verdict logic lives in ``analysis/``.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime
+from pathlib import Path
+
+from git_wombat.gitcmd import run_git, run_git_text
+from git_wombat.models import BranchInfo
+
+# Tried in order. The remote-tracking ref wins because `merged` recommends
+# deleting *remote* branches, and the only question that matters is whether the
+# branch is absorbed into the branch the remote actually has. A stale local
+# `main` would report a live branch as safe to delete.
+BASE_CANDIDATES = ("origin/main", "origin/master", "main", "master")
+
+
+
+def fetch_all(repo: Path) -> tuple[bool, datetime | None]:
+    """``git fetch --all --prune``, never raising.
+
+    ``--all`` rather than a bare fetch because analyses read remote branches
+    across every configured remote; fetching only ``origin`` would leave the
+    others permanently stale while the tool reported confident verdicts about
+    them. Returns ``(success, time_of_last_successful_fetch)``.
+    """
+    proc = run_git(repo, "fetch", "--all", "--prune")
+    if proc.returncode != 0:
+        return False, None
+    return True, fetch_head_mtime(repo)
+
+
+def fetch_head_mtime(repo: Path) -> datetime | None:
+    """Modification time of ``.git/FETCH_HEAD``, or ``None`` if never fetched.
+
+    Only a cross-run timestamp can support a meaningful staleness warning;
+    "time since this run" would render as zero on every heading.
+    """
+    git_dir = Path(run_git_text(repo, "rev-parse", "--git-dir"))
+    if not git_dir.is_absolute():
+        git_dir = repo / git_dir
+    fetch_head = git_dir / "FETCH_HEAD"
+    if not fetch_head.exists():
+        return None
+    return datetime.fromtimestamp(fetch_head.stat().st_mtime)
+
+
+def resolve_base_ref(repo: Path) -> str | None:
+    """The ref to treat as the base branch, or ``None`` when there is none.
+
+    Never guesses ``develop`` or ``trunk``: absence means the repository is
+    skipped with a warning, not that a plausible guess is made.
+    """
+    for candidate in BASE_CANDIDATES:
+        proc = run_git(repo, "rev-parse", "--verify", "--quiet", candidate)
+        if proc.returncode == 0:
+            return candidate
+    return None
+
+
+def base_ref_is_remote(base_ref: str | None) -> bool:
+    """Whether *base_ref* is a remote-tracking ref rather than a local one."""
+    return bool(base_ref) and "/" in base_ref
+
+
+def tree_hash(repo: Path, ref: str) -> str | None:
+    """Tree object of *ref*, the value the merge test compares against."""
+    proc = run_git(repo, "rev-parse", f"{ref}^{{tree}}")
+    if proc.returncode != 0:
+        return None
+    return proc.stdout.strip() or None
+
+
+def is_shallow(repo: Path) -> bool:
+    """Whether the repository is a shallow clone with possibly-absent bases."""
+    return run_git_text(repo, "rev-parse", "--is-shallow-repository") == "true"
+
+
+def stash_entries(repo: Path) -> list[str]:
+    """One description line per stash entry, newest first."""
+    output = run_git_text(repo, "stash", "list")
+    return [line for line in output.splitlines() if line.strip()]
+
+
+def _ref_exists(repo: Path, ref: str) -> bool:
+    return run_git(repo, "rev-parse", "--verify", "--quiet", ref).returncode == 0
+
+
+def configured_upstream(repo: Path, branch: str) -> tuple[str | None, str | None]:
+    """``(remote, upstream_ref)`` configured for *branch*, ignoring existence.
+
+    ``%(upstream:short)`` is empty for a deleted upstream, so the configured
+    pair has to come from git config directly. A branch whose upstream was
+    deleted still *has* an upstream — that is a different finding from having
+    none, and conflating them hides the very thing this tool reports.
+    """
+    remote = run_git(repo, "config", "--get", f"branch.{branch}.remote")
+    merge = run_git(repo, "config", "--get", f"branch.{branch}.merge")
+    remote_name = remote.stdout.strip() or None
+    merge_ref = merge.stdout.strip() or None
+    if not remote_name or not merge_ref:
+        return None, None
+    short = merge_ref.removeprefix("refs/heads/")
+    return remote_name, f"{remote_name}/{short}"
+
+
+def list_branches(repo: Path) -> list[BranchInfo]:
+    """Every local branch, with its upstream relationship.
+
+    A branch whose upstream ref is gone still has a configured upstream, so it
+    is not "no upstream" — it is a deleted upstream, which is a different
+    finding and the reason pruning matters.
+    """
+    names = run_git_text(repo, "for-each-ref", "--format=%(refname:short)",
+                         "refs/heads/")
+    branches: list[BranchInfo] = []
+    for name in (n.strip() for n in names.splitlines()):
+        if not name:
+            continue
+        remote, upstream = configured_upstream(repo, name)
+        upstream_gone = bool(upstream) and not _ref_exists(repo, upstream)
+
+        ahead = behind = 0
+        if upstream and not upstream_gone:
+            counts = run_git(repo, "rev-list", "--left-right", "--count",
+                             f"{name}...{upstream}")
+            if counts.returncode == 0:
+                # Output is tab-separated: <ahead>\t<behind>.
+                fields = counts.stdout.split()
+                if len(fields) == 2:
+                    ahead, behind = int(fields[0]), int(fields[1])
+
+        branches.append(
+            BranchInfo(
+                name=name,
+                remote=remote,
+                upstream=upstream,
+                upstream_gone=upstream_gone,
+                ahead=ahead,
+                behind=behind,
+                has_upstream=bool(upstream),
+                last_commit_rel=_last_commit_relative(repo, name),
+            )
+        )
+    return branches
+
+
+def _last_commit_relative(repo: Path, ref: str) -> str:
+    proc = run_git(repo, "log", "-1", "--format=%cr", ref)
+    return proc.stdout.strip() if proc.returncode == 0 else ""

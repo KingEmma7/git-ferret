@@ -51,6 +51,10 @@ def clone_local(src: Path, dest: Path, depth: int | None = None) -> Path:
     """Clone *src* into *dest* over ``file://``, so the remote is really fetchable.
 
     ``depth`` produces a genuinely shallow clone, which the merge tests need.
+
+    The clone gets its own local identity: a clone inherits no ``user.email``,
+    so any test that commits inside the clone would otherwise fail with
+    "Author identity unknown".
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
     url = f"file://{src.resolve()}"
@@ -59,4 +63,6 @@ def clone_local(src: Path, dest: Path, depth: int | None = None) -> Path:
         args += ["--depth", str(depth)]
     args += [url, str(dest)]
     run_git(dest.parent, *args, check=True)
+    run_git(dest, "config", "user.name", DEV_NAME, check=True)
+    run_git(dest, "config", "user.email", DEV_EMAIL, check=True)
     return dest

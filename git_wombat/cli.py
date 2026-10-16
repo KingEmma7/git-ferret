@@ -25,7 +25,8 @@ from git_wombat.config import Config, resolve_identities
 from git_wombat.discovery import discover_repos, list_worktrees
 from git_wombat.gitcmd import GitError, run_git
 from git_wombat.gitops import fetch_all, refs_updated_at, resolve_base_ref
-from git_wombat.report import emit, render_report
+from git_wombat.models import RepoReport
+from git_wombat.report import display_path, emit, render_header, render_repo
 
 app = typer.Typer(help="Audit many local git repositories at once. Reports only.")
 
@@ -67,10 +68,11 @@ def local(
         if not no_fetch:
             report.fetched_at = refs_updated_at(repo)
         if update:
-            updated.extend((repo, line) for line in fast_forward_worktrees(repo))
-        _emit_one(report, header_state)
+            updated.extend((repo, branch)
+                           for branch in fast_forward_worktrees(repo))
+        _emit_one(report, root, header_state)
 
-    _emit_summary(updated)
+    _emit_summary(updated, root)
 
 
 @app.command()
@@ -134,7 +136,6 @@ def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
          branch_filter: str | None) -> None:
     config = Config.load()
     root = _resolve_root(path)
-    reports: list = []
     header_state = [False]
 
     for repo in discover_repos(root):
@@ -153,10 +154,9 @@ def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
         report.fetch_attempted = not no_fetch
         if not no_fetch:
             report.fetched_at = refs_updated_at(repo)
-        reports.append(report)
-        _emit_one(report, header_state)
+        _emit_one(report, root, header_state)
 
-    _emit_summary([])
+    _emit_summary([], root)
 
 
 def run_command(command: str, path: Path, no_fetch: bool,
@@ -166,7 +166,7 @@ def run_command(command: str, path: Path, no_fetch: bool,
     _run(ANALYSES[command], path, no_fetch, author or [], branch_filter)
 
 
-def _emit_one(report, header_state: list[bool]) -> None:
+def _emit_one(report: RepoReport, root: Path, header_state: list[bool]) -> None:
     """Stream one repository's section as soon as it is produced.
 
     The document header and the staleness warning are emitted once, on the
@@ -176,70 +176,70 @@ def _emit_one(report, header_state: list[bool]) -> None:
     The flag lives in a caller-owned list rather than a module global: a global
     would leave it set after the first run, so a second invocation in the same
     process would emit no header and, with it, no staleness warning at all.
+
+    Sections are emitted from ``render_repo`` directly rather than by slicing a
+    whole-document render: the document strips its trailing blank line, so
+    reusing it per repository ran every section into the next one.
     """
-    text = render_report([report], 1 if (report.is_stale and not header_state[0]) else 0)
-    if header_state[0]:
-        text = text.split("\n", 1)[1].lstrip("\n")
-    else:
+    if not header_state[0]:
         header_state[0] = True
-    emit(text)
+        emit(render_header(1 if report.is_stale else 0, total=1))
+    emit(render_repo(report, root))
 
 
-def _emit_summary(updated: list) -> None:
-    """Print the roll-up: staleness warning and any fast-forwards."""
-    if updated:
-        lines = ["", "## fast-forwarded", ""]
-        for repo, line in updated:
-            lines.append(f"- {repo.name}: {line}")
-        emit("\n".join(lines) + "\n")
+def _emit_summary(updated: list, root: Path) -> None:
+    """The record of what this run wrote, one line per fast-forward.
+
+    No marker on these lines: the section says what they are, and a status
+    marker here would be a judgement about work that was simply done as asked.
+    """
+    if not updated:
+        return
+    lines = ["## fast-forwarded", ""]
+    lines += [f"- {display_path(repo, root)}: `{branch}` fast-forwarded"
+              for repo, branch in updated]
+    emit("\n".join(lines) + "\n")
 
 
 def fast_forward_worktrees(repo: Path) -> list[str]:
-    """``git merge --ff-only`` in each clean, attached worktree.
+    """The branches fast-forwarded in *repo*, and nothing else.
 
-    Git itself refuses a fast-forward that would overwrite a locally modified
-    file, so checking first is about *reporting*, not about safety: a skipped
-    worktree still needs to say why, and "not a fast-forward" would be wrong for
-    a branch that simply has uncommitted work in it.
+    ``git merge --ff-only`` in each clean, attached worktree that is behind its
+    upstream. Git itself refuses a fast-forward that would overwrite a locally
+    modified file, so the checks here are about *reporting* rather than about
+    safety, and the one check that cannot be read fails closed.
 
-    Skips are reported rather than passed over silently, because a worktree
-    holding an unfinished refactor is exactly the kind of thing a repo-hygiene
-    tool should surface. A worktree whose cleanliness cannot be determined is
-    skipped: a safety gate must fail closed.
+    Only the branches that moved are returned, because every other outcome is
+    already in the repository's own section: a detached HEAD, a dirty worktree,
+    a worktree whose status could not be read (``worktree_status`` reports that
+    as dirty, which is what it is for), a branch with no upstream, and a
+    diverged one each produce a finding there. Listing them again under a
+    heading that says "fast-forwarded" would put work that was deliberately
+    not done beside work that was.
+
+    The one case no finding covers is a base branch (``main``, ``master``, the
+    resolved base ref) with no upstream: base branches are excluded from branch
+    findings by design, on the grounds that they are not findings. It is left
+    unreported for that reason, not by oversight.
     """
-    results: list[str] = []
+    updated: list[str] = []
     for worktree, branch in list_worktrees(repo):
         if branch is None:
-            results.append("`?` — [DETACHED] skipped: detached HEAD")
             continue
         status = run_git(worktree, "status", "--porcelain", check=False)
-        if status.returncode != 0:
-            results.append(f"`{branch}` — [UNKNOWN] skipped: worktree status unreadable")
-            continue
-        if status.stdout.strip():
-            results.append(
-                f"`{branch}` — [DIRTY] skipped: uncommitted changes "
-                "(git could fast-forward these, if they do not overlap)"
-            )
+        if status.returncode != 0 or status.stdout.strip():
             continue
         has_upstream = run_git(worktree, "rev-parse", "--verify", "--quiet",
                                "@{upstream}").returncode == 0
         if not has_upstream:
-            results.append(f"`{branch}` — [OK] skipped: no upstream configured")
             continue
         behind = run_git(worktree, "rev-list", "--count", "HEAD..@{upstream}")
         if behind.returncode == 0 and behind.stdout.strip() == "0":
-            results.append(f"`{branch}` — [OK] already up to date")
             continue
         proc = run_git(worktree, "merge", "--ff-only")
         if proc.returncode == 0:
-            results.append(f"`{branch}` — [OK] fast-forwarded")
-        else:
-            results.append(
-                f"`{branch}` — [DIVERGED] skipped: cannot fast-forward "
-                "(local and upstream have diverged)"
-            )
-    return results
+            updated.append(branch)
+    return updated
 
 
 def main() -> None:

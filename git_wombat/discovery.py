@@ -47,8 +47,55 @@ def is_bare(repo: Path) -> bool:
     return run_git_text(repo, "rev-parse", "--is-bare-repository") == "true"
 
 
+def _gitdir_target(path: Path) -> Path | None:
+    """The git directory a ``.git`` *file* points at, if this is a worktree.
+
+    A linked worktree's ``.git`` is a file naming its directory under the main
+    repository's ``.git/worktrees/``. That is what identifies a secondary
+    worktree as belonging to a repository already discovered, rather than being
+    a repository in its own right.
+    """
+    dot_git = path / ".git"
+    if not dot_git.is_file():
+        return None
+    try:
+        content = dot_git.read_text().strip()
+    except OSError:
+        return None
+    if not content.startswith("gitdir:"):
+        return None
+    target = Path(content.split(":", 1)[1].strip())
+    if not target.is_absolute():
+        target = (path / target).resolve()
+    return target
+
+
+def repository_identity(path: Path) -> str | None:
+    """A stable key identifying the repository *path* belongs to.
+
+    Main worktrees key on their own ``.git`` directory; linked worktrees key on
+    the *main* repository's ``.git`` directory, so several worktrees of one
+    repository collapse to a single entry. Submodules key on their superproject
+    and are excluded separately.
+    """
+    dot_git = path / ".git"
+    if dot_git.is_dir():
+        return str(dot_git.resolve())
+    target = _gitdir_target(path)
+    if target is None:
+        return None
+    # .../<repo>/.git/worktrees/<name> -> .../<repo>/.git
+    if target.parent.name == "worktrees":
+        return str(target.parent.parent)
+    return str(target)
+
+
 def discover_repos(root: Path) -> list[Path]:
     """Every repository at or under *root*, sorted, without descending into one.
+
+    A repository is reported once. A linked worktree sitting beside its main
+    repository resolves to the same repository and is not reported again, which
+    would otherwise double every finding and fetch the same repository twice.
 
     Sorting keeps report output deterministic across runs, which is what makes
     two reports worth diffing.
@@ -56,17 +103,23 @@ def discover_repos(root: Path) -> list[Path]:
     if not root.is_dir():
         return []
 
-    found: list[Path] = []
+    chosen: dict[str, Path] = {}
+    has_main: set[str] = set()
     for dirpath, dirnames, _ in os.walk(root):
         current = Path(dirpath)
         if is_git_dir(current) and not is_submodule(current):
-            found.append(current)
-            # Prune: everything below this repository is part of it.
+            identity = repository_identity(current)
+            if identity is not None:
+                if (current / ".git").is_dir():
+                    # A main worktree always wins over a linked one.
+                    chosen[identity] = current
+                    has_main.add(identity)
+                elif identity not in has_main:
+                    chosen.setdefault(identity, current)
             dirnames[:] = []
         else:
-            # Never descend into a repository's internals.
             dirnames[:] = [d for d in dirnames if d != ".git"]
-    return sorted(found)
+    return sorted(chosen.values())
 
 
 def list_worktrees(repo: Path) -> list[tuple[Path, str | None]]:

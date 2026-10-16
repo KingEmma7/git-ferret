@@ -6,8 +6,8 @@ from pathlib import Path
 
 from git_wombat.config import Config
 from git_wombat.discovery import list_worktrees
-from git_wombat.gitcmd import run_git_text
-from git_wombat.gitops import fetch_all, list_branches
+from git_wombat.gitcmd import run_git, run_git_text
+from git_wombat.gitops import fetch_all, fetch_head_mtime, list_branches, stash_entries
 from git_wombat.models import BranchInfo, Finding, RepoReport, Status, WorktreeInfo
 
 EMOJI_OK = "✓"
@@ -18,7 +18,9 @@ _EMOJI_FOR = {
     Status.OK: EMOJI_OK,
     Status.DIRTY: EMOJI_WARN,
     Status.DETACHED: EMOJI_WARN,
+    Status.STASH: EMOJI_WARN,
     Status.NOT_PUSHED: EMOJI_WARN,
+    Status.NOT_MERGED: EMOJI_WARN,
     Status.DIVERGED: EMOJI_WARN,
     Status.UPSTREAM_DELETED: EMOJI_WARN,
     Status.CONFLICTS: EMOJI_ERROR,
@@ -35,22 +37,37 @@ def branch_finding(branch: BranchInfo) -> Finding | None:
 
     Overlapping conditions collapse to a single primary status in precedence
     order, because a branch whose upstream was deleted is simultaneously ahead
-    of an upstream that no longer exists; listing it three times is noise, and
-    the primary label is the one that determines the action.
+    of an upstream that no longer exists. The primary label is the one that
+    determines the action, and the supporting detail is kept rather than
+    discarded: "upstream deleted" alone cannot distinguish a branch abandoned
+    this morning from one abandoned a year ago with work still on it.
     """
+    age = _age_suffix(branch.last_commit_rel)
     if branch.upstream_gone:
-        return _finding(branch, Status.UPSTREAM_DELETED, "upstream deleted on remote")
+        extra = f"also {branch.ahead} commits unpushed" if branch.ahead else None
+        detail = " · ".join(p for p in (extra, age) if p)
+        return _finding(branch, Status.UPSTREAM_DELETED,
+                        f"upstream deleted on remote{' · ' + detail if detail else ''}")
     if branch.ahead > 0 and branch.behind > 0:
         return _finding(
             branch,
             Status.DIVERGED,
-            f"{branch.ahead} ahead, {branch.behind} behind — cannot fast-forward",
+            f"{branch.ahead} ahead, {branch.behind} behind — cannot fast-forward"
+            + (f" · {age}" if age else ""),
         )
     if not branch.has_upstream:
-        return _finding(branch, Status.NOT_PUSHED, "no upstream configured")
+        return _finding(branch, Status.NOT_PUSHED,
+                        f"no upstream configured{' · ' + age if age else ''}")
     if branch.ahead > 0:
-        return _finding(branch, Status.NOT_PUSHED, f"{branch.ahead} commits ahead")
-    return _finding(branch, Status.OK, "fully pushed")
+        return _finding(branch, Status.NOT_PUSHED,
+                        f"{branch.ahead} commits ahead{' · ' + age if age else ''}")
+    return _finding(branch, Status.OK, f"fully pushed{' · ' + age if age else ''}")
+
+
+def _age_suffix(last_commit_rel: str) -> str:
+    if not last_commit_rel:
+        return ""
+    return f"last commit {last_commit_rel}"
 
 
 def _finding(branch: BranchInfo, status: Status, detail: str) -> Finding:
@@ -67,12 +84,16 @@ def worktree_status(worktree: Path) -> tuple[bool, str]:
 
     Untracked files count as dirty: they are unsaved work, and a report that
     called a worktree clean while untracked files sat in it would be wrong.
+
+    A status that cannot be read is reported as **dirty**, not clean. This value
+    gates the tool's only write, and a safety gate must fail closed — reporting
+    an unreadable worktree as clean would let a fast-forward proceed on a
+    worktree whose state is unknown.
     """
-    try:
-        output = run_git_text(worktree, "status", "--porcelain")
-    except Exception:
-        return False, ""
-    lines = [line for line in output.splitlines() if line.strip()]
+    proc = run_git(worktree, "status", "--porcelain", check=False)
+    if proc.returncode != 0:
+        return True, "worktree status unreadable"
+    lines = [line for line in proc.stdout.splitlines() if line.strip()]
     if not lines:
         return False, ""
     untracked = sum(1 for line in lines if line.startswith("??"))
@@ -97,13 +118,12 @@ def analyse_local(
     report = RepoReport(path=repo, base_ref=base_ref)
 
     if do_fetch:
-        ok, when = fetch_all(repo)
+        ok, _when = fetch_all(repo)
         report.fetch_failed = not ok
-        report.fetched_at = when
-    else:
-        from git_wombat.gitops import fetch_head_mtime
-
-        report.fetched_at = fetch_head_mtime(repo)
+    # Always stamp the age of the last successful fetch, whether or not this
+    # call fetched. Without this a --no-fetch run reports no time at all, so
+    # stale state becomes indistinguishable from fresh state.
+    report.fetched_at = fetch_head_mtime(repo)
 
     for path, branch_name in list_worktrees(repo):
         dirty, detail = worktree_status(path)
@@ -140,6 +160,9 @@ def analyse_local(
             )
         )
 
+    _report_remote_health(repo, report, do_fetch)
+    _report_stashes(repo, report)
+
     for branch in list_branches(repo):
         if _always_excluded(branch.name, base_ref):
             # `main`, `master`, and the base ref are never listed as branches.
@@ -160,6 +183,47 @@ def _always_excluded(name: str, base_ref: str | None) -> bool:
     if name in ("main", "master"):
         return True
     return base_ref is not None and name in (base_ref, base_ref.split("/")[-1])
+
+
+def _report_remote_health(repo: Path, report: RepoReport, do_fetch: bool) -> None:
+    """Report a missing remote, or one whose fetch failed.
+
+    These are the cases git can tell us about without a network round trip
+    beyond the fetch itself. Under ``--no-fetch`` no probe is made, so a
+    server-deleted project is undetectable and must not be implied either way.
+    """
+    remotes = run_git(repo, "remote").stdout.split()
+    if not remotes:
+        report.findings.append(
+            Finding(
+                branch=repo.name,
+                status=Status.UNREACHABLE,
+                detail="no remote configured",
+                emoji=_EMOJI_FOR[Status.UNREACHABLE],
+            )
+        )
+    elif do_fetch and report.fetch_failed:
+        report.findings.append(
+            Finding(
+                branch=repo.name,
+                status=Status.UNREACHABLE,
+                detail=f"fetch failed for {', '.join(remotes)}",
+                emoji=_EMOJI_FOR[Status.UNREACHABLE],
+            )
+        )
+
+
+def _report_stashes(repo: Path, report: RepoReport) -> None:
+    """Report stashes: they are half-finished work this tool exists to surface."""
+    for entry in stash_entries(repo):
+        report.findings.append(
+            Finding(
+                branch=repo.name,
+                status=Status.STASH,
+                detail=entry,
+                emoji=_EMOJI_FOR[Status.STASH],
+            )
+        )
 
 
 def branch_status_is_clean(branch: BranchInfo) -> bool:

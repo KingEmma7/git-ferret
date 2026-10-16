@@ -46,12 +46,12 @@ def merge_verdict(repo: Path, base_ref: str, branch_ref: str) -> MergeVerdict:
     parsing prose: 0 is a clean merge, 1 lists conflicting hunks, and 128 is a
     refusal with no merge base. Collapsing every non-zero into "conflicts"
     would confidently mislabel an unrelated-history repository.
-    """
-    if is_shallow(repo):
-        # The merge base may be absent, and merge-tree then fails in a way that
-        # resembles a conflict without being one.
-        return MergeVerdict.UNKNOWN
 
+    A shallow repository is not short-circuited to UNKNOWN: a shallow clone may
+    still hold the merge base for a given pair, and throwing that away would
+    discard a real answer. The merge is attempted, and only a genuine failure
+    becomes UNKNOWN.
+    """
     proc = run_git(repo, "merge-tree", "--write-tree", base_ref, branch_ref)
     if proc.returncode == MERGED_EXIT:
         result_tree = proc.stdout.strip().splitlines()[0].strip()
@@ -64,7 +64,13 @@ def merge_verdict(repo: Path, base_ref: str, branch_ref: str) -> MergeVerdict:
             else MergeVerdict.NOT_MERGED
         )
     if proc.returncode == CONFLICT_EXIT:
-        return MergeVerdict.CONFLICTS
+        # A genuine conflict prints the merged tree and then the conflicted
+        # paths. A ref that cannot be resolved — the usual case in a shallow
+        # clone — also exits 1 but prints nothing at all, and calling that a
+        # conflict would fabricate a verdict about a branch we could not read.
+        if proc.stdout.strip():
+            return MergeVerdict.CONFLICTS
+        return MergeVerdict.UNKNOWN
     return MergeVerdict.UNKNOWN
 
 

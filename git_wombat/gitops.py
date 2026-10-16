@@ -90,6 +90,19 @@ def _ref_exists(repo: Path, ref: str) -> bool:
     return run_git(repo, "rev-parse", "--verify", "--quiet", ref).returncode == 0
 
 
+def _merge_ref(repo: Path, branch: str) -> str | None:
+    """A comparison ref for a branch whose upstream ref has been deleted.
+
+    The remote-tracking ref is gone, so there is nothing left to compare
+    against directly. The base branch is the best remaining yardstick: commits
+    on this branch that the base does not have are the ones at risk.
+    """
+    for candidate in ("origin/main", "origin/master", "main", "master"):
+        if candidate != branch and _ref_exists(repo, candidate):
+            return candidate
+    return None
+
+
 def configured_upstream(repo: Path, branch: str) -> tuple[str | None, str | None]:
     """``(remote, upstream_ref)`` configured for *branch*, ignoring existence.
 
@@ -125,14 +138,20 @@ def list_branches(repo: Path) -> list[BranchInfo]:
         upstream_gone = bool(upstream) and not _ref_exists(repo, upstream)
 
         ahead = behind = 0
-        if upstream and not upstream_gone:
-            counts = run_git(repo, "rev-list", "--left-right", "--count",
-                             f"{name}...{upstream}")
-            if counts.returncode == 0:
-                # Output is tab-separated: <ahead>\t<behind>.
-                fields = counts.stdout.split()
-                if len(fields) == 2:
-                    ahead, behind = int(fields[0]), int(fields[1])
+        if upstream:
+            # Compare against the configured merge ref even when the remote
+            # tracking ref is gone: the commits ahead are exactly the work that
+            # exists only locally, which is the number a deleted-upstream
+            # finding needs to report.
+            comparison = upstream if not upstream_gone else _merge_ref(repo, name)
+            if comparison and _ref_exists(repo, comparison):
+                counts = run_git(repo, "rev-list", "--left-right", "--count",
+                                 f"{name}...{comparison}")
+                if counts.returncode == 0:
+                    # Output is tab-separated: <ahead>\t<behind>.
+                    fields = counts.stdout.split()
+                    if len(fields) == 2:
+                        ahead, behind = int(fields[0]), int(fields[1])
 
         branches.append(
             BranchInfo(

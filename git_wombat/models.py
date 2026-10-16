@@ -23,12 +23,14 @@ class Status(StrEnum):
 
     OK = "OK"
     NOT_PUSHED = "NOT_PUSHED"
+    NOT_MERGED = "NOT_MERGED"
     DIVERGED = "DIVERGED"
     UPSTREAM_DELETED = "UPSTREAM_DELETED"
     CONFLICTS = "CONFLICTS"
     UNKNOWN = "UNKNOWN"
     DIRTY = "DIRTY"
     DETACHED = "DETACHED"
+    STASH = "STASH"
     UNREACHABLE = "UNREACHABLE"
     NO_BASE = "NO_BASE"
 
@@ -90,6 +92,7 @@ class RepoReport:
     base_ref: str | None = None
     fetched_at: datetime | None = None
     fetch_failed: bool = False
+    fetch_attempted: bool = True
     skipped_reason: str | None = None
     worktrees: list[WorktreeInfo] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
@@ -99,3 +102,13 @@ class RepoReport:
     def needs_base(self) -> bool:
         """True when no base ref resolved, so merge-based analysis cannot run."""
         return self.base_ref is None
+
+    @property
+    def is_stale(self) -> bool:
+        """Whether this report rests on state this run did not refresh.
+
+        True whenever no fetch was attempted (``--no-fetch``) or the attempt
+        failed. A repository that was never fetched is a different case from one
+        fetched seconds ago, and both differ from one holding month-old refs.
+        """
+        return not self.fetch_attempted or self.fetch_failed or self.fetched_at is None

@@ -18,12 +18,14 @@ def test_status_values_are_exactly_the_documented_set():
     assert {s.name for s in Status} == {
         "OK",
         "NOT_PUSHED",
+        "NOT_MERGED",
         "DIVERGED",
         "UPSTREAM_DELETED",
         "CONFLICTS",
         "UNKNOWN",
         "DIRTY",
         "DETACHED",
+        "STASH",
         "UNREACHABLE",
         "NO_BASE",
     }

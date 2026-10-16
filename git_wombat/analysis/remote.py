@@ -30,10 +30,26 @@ from git_wombat.models import Finding, RepoReport, Status
 
 _STATUS_FOR_VERDICT = {
     MergeVerdict.MERGED: Status.OK,
-    MergeVerdict.NOT_MERGED: Status.NOT_PUSHED,
+    # `merged` only ever iterates remote refs, so every branch it lists is
+    # already pushed. Calling an unmerged remote branch "[NOT PUSHED]" would
+    # tell the user they have unpushed work, which is a different claim.
+    MergeVerdict.NOT_MERGED: Status.NOT_MERGED,
     MergeVerdict.CONFLICTS: Status.CONFLICTS,
     MergeVerdict.UNKNOWN: Status.UNKNOWN,
 }
+
+
+def local_branch_unpushed_map(repo: Path) -> dict[str, bool]:
+    """``{branch: has unpushed work}`` for every local branch, in one pass.
+
+    Taken once per run rather than per candidate: re-listing branches for each
+    remote branch is quadratic, and the branches this tool reports are exactly
+    the merged ones, so the cost lands on the hot path.
+    """
+    return {
+        b.name: (b.ahead > 0 or b.upstream_gone)
+        for b in list_branches(repo)
+    }
 
 
 def local_branch_unpushed(repo: Path, branch: str) -> bool:
@@ -55,13 +71,21 @@ def local_branch_unpushed(repo: Path, branch: str) -> bool:
 def _candidate_refs(
     repo: Path, config: Config, base_ref: str | None
 ) -> list[str]:
-    """Remote branch refs worth analysing, minus base, main, master, whitelist."""
+    """Remote branch refs worth analysing.
+
+    Excludes the base ref itself and ``main``/``master`` **on the base's own
+    remote**. A second remote's ``main`` is a different branch — often a fork's
+    trunk, and exactly the kind of divergence worth reporting — so it must not
+    be dropped just because its short name is "main".
+    """
+    base_remote = base_ref.split("/")[0] if base_ref and "/" in base_ref else None
     candidates = []
     for ref in remote_branches(repo):
         name = branch_name_from_ref(ref)
-        if name in ("main", "master"):
+        remote = ref.split("/")[0] if "/" in ref else None
+        if base_ref is not None and ref == base_ref:
             continue
-        if base_ref is not None and ref in (base_ref, branch_name_from_ref(base_ref)):
+        if name in ("main", "master") and remote == base_remote:
             continue
         # For remote scans the whitelist is absolute: ignored entirely.
         if config.is_whitelisted(name):
@@ -155,6 +179,8 @@ def analyse_merged_candidates(
     if base_ref is None:
         return report
 
+    unpushed = local_branch_unpushed_map(repo)
+
     for ref in _candidate_refs(repo, config, base_ref):
         if not _passes_filters(repo, ref, base_ref, identities, branch_filter):
             continue
@@ -174,7 +200,7 @@ def analyse_merged_candidates(
             )
             continue
 
-        if local_branch_unpushed(repo, name):
+        if unpushed.get(name, False):
             report.findings.append(
                 Finding(
                     branch=ref,

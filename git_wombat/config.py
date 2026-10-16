@@ -21,6 +21,25 @@ DEFAULT_CONFIG_PATH = Path.home() / ".git-wombat.toml"
 ALWAYS_EXCLUDED = ("main", "master")
 
 
+def split_identities(values: Iterable[str]) -> list[str]:
+    """Split comma-separated identity values and drop blank entries.
+
+    Both the flag and the config file accept a bare string or a list, and a
+    user writing ``--author "a@x.com,b@y.com"`` means two identities, not one
+    string that will never match an author line.
+
+    Blanks are dropped rather than kept: an empty identity is a substring of
+    every author string, so keeping one would report every branch as the user's.
+    """
+    identities: list[str] = []
+    for value in values:
+        for part in str(value).split(","):
+            cleaned = part.strip()
+            if cleaned:
+                identities.append(cleaned)
+    return identities
+
+
 @dataclass
 class Config:
     """Resolved user configuration.
@@ -40,7 +59,9 @@ class Config:
             return cls()
         data = tomllib.loads(config_path.read_text())
         raw_author = data.get("author", [])
-        author = [raw_author] if isinstance(raw_author, str) else list(raw_author)
+        author = split_identities(
+            [raw_author] if isinstance(raw_author, str) else list(raw_author)
+        )
         whitelist = list(data.get("whitelist", {}).get("patterns", []))
         return cls(author=author, whitelist=whitelist)
 
@@ -74,9 +95,9 @@ def resolve_identities(
     report every branch as the user's own.
     """
     if cli_author:
-        return list(cli_author)
+        return split_identities(cli_author)
     if config.author:
-        return list(config.author)
+        return split_identities(config.author)
 
     name = run_git(repo, "config", "--get", "user.name").stdout.strip()
     email = run_git(repo, "config", "--get", "user.email").stdout.strip()
@@ -94,12 +115,17 @@ def identity_matches(
 
     Substring, not equality: the user configures a fragment such as an email
     address and it must match the full ``Name <email>`` git records.
+
+    Blank identities are ignored here as well as at resolution, because the
+    empty string is a substring of every author and would otherwise report
+    every branch in the repository as the user's own.
     """
-    if not identities:
+    usable = [i for i in identities if i and i.strip()]
+    if not usable:
         return False
     authors = list(commits_author_strings)
     return any(
         identity in author
-        for identity in identities
+        for identity in usable
         for author in authors
     )

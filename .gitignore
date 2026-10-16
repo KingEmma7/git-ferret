@@ -65,6 +65,9 @@ pip-wheel-metadata/
 *~
 .DS_Store
 
+# Isolated workspaces
+.worktrees/
+
 # NOTE: .git/ is deliberately NOT ignored. git-wombat analyses git
 # repositories, so treating it as ordinary build output would be wrong, and the
 # directory is already tracked implicitly as the repository itself.

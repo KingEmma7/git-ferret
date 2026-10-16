@@ -38,14 +38,14 @@ def test_remote_filters_by_branch_name(tmp_path):
     clone = _repo_with_branches(
         tmp_path, [("ABC-123-add-thing", FRAN), ("ZZZ-other", OTHER)]
     )
-    rep = analyse_remote(clone, Config(), resolve_base_ref(clone), [], "ABC-123", False)
+    rep = analyse_remote(clone, Config(), resolve_base_ref(clone), [], "ABC-123")
     assert "origin/ABC-123-add-thing" in _names(rep)
     assert "origin/ZZZ-other" not in _names(rep)
 
 
 def test_remote_filters_by_author(tmp_path):
     clone = _repo_with_branches(tmp_path, [("by-fran", FRAN), ("by-someone", OTHER)])
-    rep = analyse_remote(clone, Config(), resolve_base_ref(clone), ["fran@z.com"], None, False)
+    rep = analyse_remote(clone, Config(), resolve_base_ref(clone), ["fran@z.com"], None)
     assert "origin/by-fran" in _names(rep)
     assert "origin/by-someone" not in _names(rep)
 
@@ -53,7 +53,7 @@ def test_remote_filters_by_author(tmp_path):
 def test_both_filters_combine_with_and(tmp_path):
     clone = _repo_with_branches(tmp_path, [("by-fran", FRAN), ("by-someone", OTHER)])
     rep = analyse_remote(
-        clone, Config(), resolve_base_ref(clone), ["fran@z.com"], "by-fran", False
+        clone, Config(), resolve_base_ref(clone), ["fran@z.com"], "by-fran"
     )
     assert _names(rep) == {"origin/by-fran"}
 
@@ -61,19 +61,19 @@ def test_both_filters_combine_with_and(tmp_path):
 def test_remote_ignores_whitelisted_branches(tmp_path):
     clone = _repo_with_branches(tmp_path, [("release/9", FRAN)])
     rep = analyse_remote(clone, Config(whitelist=["release/*"]), resolve_base_ref(clone),
-                         [], None, False)
+                         [], None)
     assert "origin/release/9" not in _names(rep)
 
 
 def test_remote_never_lists_the_base_ref(tmp_path):
     clone = _repo_with_branches(tmp_path, [("feature", FRAN)])
-    rep = analyse_remote(clone, Config(), resolve_base_ref(clone), [], None, False)
+    rep = analyse_remote(clone, Config(), resolve_base_ref(clone), [], None)
     assert "origin/main" not in _names(rep)
 
 
 def test_empty_identities_lists_all_remote_branches(tmp_path):
     clone = _repo_with_branches(tmp_path, [("someone-elses", OTHER)])
-    rep = analyse_remote(clone, Config(), resolve_base_ref(clone), [], None, False)
+    rep = analyse_remote(clone, Config(), resolve_base_ref(clone), [], None)
     assert "origin/someone-elses" in _names(rep)
 
 
@@ -96,7 +96,7 @@ def _merged_repo(tmp_path):
 def test_merged_branch_marked_safe_when_no_local_unpushed(tmp_path):
     clone = _merged_repo(tmp_path)
     assert local_branch_unpushed(clone, "done") is False
-    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/done")
     assert f.status is Status.SAFE_TO_DELETE
 
@@ -109,7 +109,7 @@ def test_merged_branch_marked_unsafe_when_local_unpushed(tmp_path):
     (clone / "local-only.txt").write_text("mine\n")
     commit(clone, "local only")
     assert local_branch_unpushed(clone, "done") is True
-    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/done")
     # Merged is not the claim being made here, so the marker must not be [OK].
     assert f.status is Status.UNSAFE_TO_DELETE
@@ -139,7 +139,7 @@ def test_merged_branch_unsafe_when_local_branch_has_no_upstream(tmp_path):
     (clone / "local-only.txt").write_text("mine\n")
     commit(clone, "local only")
 
-    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/done")
     assert f.status is Status.UNSAFE_TO_DELETE
     assert "unpushed" in f.detail.lower()
@@ -155,7 +155,7 @@ def test_merged_unmerged_branch_is_not_safe(tmp_path):
     run(src, "checkout", "main")
     clone = clone_local(src, tmp_path / "clone")
     run(clone, "fetch", "--all", "--prune")
-    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/open-work")
     assert f.status is Status.NOT_MERGED
 
@@ -172,7 +172,7 @@ def test_merged_conflicting_branch_is_not_safe(tmp_path):
     commit(src, "side b")
     clone = clone_local(src, tmp_path / "clone")
     run(clone, "fetch", "--all", "--prune")
-    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/conflict")
     assert f.status is Status.CONFLICTS
 
@@ -188,7 +188,7 @@ def test_merged_never_marks_unknown_as_safe(tmp_path):
     run(src, "checkout", "main")
     clone = clone_local(src, tmp_path / "clone")
     run(clone, "fetch", "--all", "--prune")
-    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/orphan")
     assert f.status is Status.UNKNOWN
 
@@ -210,7 +210,7 @@ def test_safe_to_delete_against_a_local_base_ref_is_marked_weaker(tmp_path):
     # Strip origin/main from the clone so the base ref falls back to local main,
     # which is a weaker claim than the remote's own.
     run(clone, "update-ref", "-d", "refs/remotes/origin/main")
-    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/done")
     assert f.status is Status.SAFE_TO_DELETE
     assert f.emoji == Status.UNKNOWN.EMOJI
@@ -219,5 +219,5 @@ def test_safe_to_delete_against_a_local_base_ref_is_marked_weaker(tmp_path):
 
 def test_merged_respects_branch_filter(tmp_path):
     clone = _merged_repo(tmp_path)
-    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], "nomatch", False)
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], "nomatch")
     assert "origin/done" not in _names(rep)

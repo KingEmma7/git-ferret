@@ -106,6 +106,24 @@ def test_genuinely_stale_state_is_still_flagged(tmp_path, capsys):
     assert "stale" in capsys.readouterr().out.lower()
 
 
+def test_fetch_failure_is_reported_unreachable_and_stale(tmp_path):
+    # A failing fetch is the one way a run reads state it could not refresh, so
+    # it must surface as [UNREACHABLE] and must mark the run stale. The direct
+    # analyse_* tests below this file call the analysis without the CLI's fetch
+    # step, so this is the path that actually ships.
+    repo = make_repo(tmp_path / "r")
+    (repo / "f.txt").write_text("a\n")
+    commit(repo, "base")
+    run(repo, "remote", "add", "origin", "/nonexistent/path.git")
+
+    result = _cli("local", str(repo))
+
+    assert result.returncode == 0, result.stderr
+    assert "[UNREACHABLE]" in result.stdout
+    assert "fetch failed" in result.stdout
+    assert "stale" in result.stdout.lower()
+
+
 # --- exit codes ---------------------------------------------------------------
 
 def test_unknown_command_exits_one():

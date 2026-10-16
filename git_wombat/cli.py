@@ -16,6 +16,7 @@ from pathlib import Path
 
 import typer
 
+from git_wombat.analysis.health import report_remote_health
 from git_wombat.analysis.local import analyse_local
 from git_wombat.analysis.remote import (
     analyse_merged_candidates,
@@ -24,16 +25,14 @@ from git_wombat.analysis.remote import (
 from git_wombat.config import Config, resolve_identities
 from git_wombat.discovery import discover_repos, list_worktrees
 from git_wombat.gitcmd import GitError, run_git
-from git_wombat.gitops import fetch_all, refs_updated_at, resolve_base_ref
+from git_wombat.gitops import fetch_all, resolve_base_ref
 from git_wombat.models import RepoReport
 from git_wombat.report import display_path, emit, render_header, render_repo
 
 app = typer.Typer(help="Audit many local git repositories at once. Reports only.")
 
 ANALYSES = {
-    "local": lambda repo, cfg, base, ids, bfilter, fetch: analyse_local(
-        repo, cfg, base, fetch
-    ),
+    "local": lambda repo, cfg, base, ids, bfilter: analyse_local(repo, cfg, base),
     "remote": analyse_remote,
     "merged": analyse_merged_candidates,
 }
@@ -56,17 +55,16 @@ def local(
     header_state = [False]
 
     for repo in discover_repos(root):
-        if not no_fetch:
-            fetch_all(repo)
+        attempted, failed = _fetch_report(repo, no_fetch)
         base_ref = resolve_base_ref(repo)
         try:
-            report = analyse_local(repo, config, base_ref, False)
+            report = analyse_local(repo, config, base_ref)
         except (GitError, OSError, subprocess.SubprocessError) as exc:
             _warn(f"error analysing {repo}: {exc}")
             continue
-        report.fetch_attempted = not no_fetch
-        if not no_fetch:
-            report.fetched_at = refs_updated_at(repo)
+        report.fetch_attempted = attempted
+        report.fetch_failed = failed
+        report_remote_health(repo, report)
         if update:
             updated.extend((repo, branch)
                            for branch in fast_forward_worktrees(repo))
@@ -132,6 +130,19 @@ def _warn(message: str) -> None:
     print(message, file=sys.stderr)
 
 
+def _fetch_report(repo: Path, no_fetch: bool) -> tuple[bool, bool]:
+    """Fetch *repo* unless asked not to; return ``(attempted, failed)``.
+
+    The one place a fetch happens. Its outcome is recorded on the report the
+    caller is about to build, so the analyses stay free of the network and the
+    stale warning and the ``[UNREACHABLE]`` finding read from the same source.
+    """
+    if no_fetch:
+        return False, False
+    ok, _when = fetch_all(repo)
+    return True, not ok
+
+
 def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
          branch_filter: str | None) -> None:
     config = Config.load()
@@ -142,18 +153,16 @@ def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
         # Fetch BEFORE resolving the base ref. Resolving first would judge a
         # branch against a local `main` that this run's own fetch is about to
         # supersede, reporting live branches as unmerged.
-        if not no_fetch:
-            fetch_all(repo)
+        attempted, failed = _fetch_report(repo, no_fetch)
         base_ref = resolve_base_ref(repo)
         identities = resolve_identities(author or [], config, repo)
         try:
-            report = analysis(repo, config, base_ref, identities, branch_filter, False)
+            report = analysis(repo, config, base_ref, identities, branch_filter)
         except (GitError, OSError, subprocess.SubprocessError) as exc:
             _warn(f"error analysing {repo}: {exc}")
             continue
-        report.fetch_attempted = not no_fetch
-        if not no_fetch:
-            report.fetched_at = refs_updated_at(repo)
+        report.fetch_attempted = attempted
+        report.fetch_failed = failed
         _emit_one(report, root, header_state)
 
     _emit_summary([], root)

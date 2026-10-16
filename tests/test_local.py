@@ -7,8 +7,8 @@ from git_wombat.models import Status
 from tests.helpers import commit, make_repo, run
 
 
-def _report(repo, config=None, do_fetch=False):
-    return analyse_local(repo, config or Config(), resolve_base_ref(repo), do_fetch)
+def _report(repo, config=None):
+    return analyse_local(repo, config or Config(), resolve_base_ref(repo))
 
 
 def _statuses(rep):
@@ -188,7 +188,7 @@ def test_no_base_branch_skips_with_reason(tmp_path):
     (repo / "f.txt").write_text("a\n")
     commit(repo, "base")
     run(repo, "branch", "-m", "main", "trunk")
-    rep = analyse_local(repo, Config(), None, False)
+    rep = analyse_local(repo, Config(), None)
     assert rep.skipped_reason is not None
 
 
@@ -201,30 +201,17 @@ def test_worktrees_are_recorded_on_the_report(tmp_path):
     assert rep.worktrees[0].branch == "main"
 
 
-def test_fetch_records_timestamp(tmp_path):
+def test_analysis_stamps_the_age_of_the_refs(tmp_path):
+    from tests.helpers import clone_local
+
     src = make_repo(tmp_path / "src")
     (src / "f.txt").write_text("a\n")
     commit(src, "base")
-    from tests.helpers import clone_local
-
     clone = clone_local(src, tmp_path / "clone")
-    rep = _report(clone, Config(), True)
+
+    # The analysis reports on state already in .git and stamps when that state
+    # was last refreshed. Whether a fetch was attempted this run, and whether it
+    # succeeded, is the CLI's to record (test_freshness_and_exit.py).
+    rep = _report(clone)
     assert rep.fetched_at is not None
     assert rep.fetch_failed is False
-
-
-def test_no_fetch_leaves_timestamp_from_prior_fetch(tmp_path):
-    from tests.helpers import clone_local
-
-    src = make_repo(tmp_path / "src")
-    (src / "f.txt").write_text("a\n")
-    commit(src, "base")
-    clone = clone_local(src, tmp_path / "clone")
-
-    # A clone writes remote-tracking refs, so even before any fetch there is a
-    # real timestamp for the state being read.
-    before = _report(clone, Config(), False).fetched_at
-    assert before is not None
-    after_fetch = _report(clone, Config(), True).fetched_at
-    assert after_fetch is not None
-    assert _report(clone, Config(), False).fetched_at is not None

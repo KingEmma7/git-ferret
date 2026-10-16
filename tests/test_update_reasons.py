@@ -30,7 +30,7 @@ def _behind_clone(tmp_path):
 
 
 def _finding(repo, status):
-    rep = analyse_local(repo, Config(), resolve_base_ref(repo), do_fetch=False)
+    rep = analyse_local(repo, Config(), resolve_base_ref(repo))
     return next(f for f in rep.findings if f.status is status)
 
 

@@ -22,7 +22,6 @@ from git_wombat.config import Config, identity_matches
 from git_wombat.gitcmd import run_git
 from git_wombat.gitops import (
     base_ref_is_remote,
-    fetch_all,
     refs_updated_at,
     list_branches,
 )
@@ -119,14 +118,11 @@ def _passes_filters(
     return True
 
 
-def _new_report(repo: Path, base_ref: str | None, do_fetch: bool) -> RepoReport:
+def _new_report(repo: Path, base_ref: str | None) -> RepoReport:
     report = RepoReport(path=repo, base_ref=base_ref)
-    if do_fetch:
-        ok, when = fetch_all(repo)
-        report.fetch_failed = not ok
-        report.fetched_at = when
-    else:
-        report.fetched_at = refs_updated_at(repo)
+    # The age of the last successful fetch, so a stale answer is visibly stale;
+    # whether this run attempted or failed a fetch is the caller's to record.
+    report.fetched_at = refs_updated_at(repo)
     if base_ref is None:
         report.skipped_reason = NO_BASE_REASON
         report.findings.append(
@@ -145,10 +141,9 @@ def analyse_remote(
     base_ref: str | None,
     identities: list[str],
     branch_filter: str | None,
-    do_fetch: bool,
 ) -> RepoReport:
     """List remote branches matching the filters. No deletion verdict here."""
-    report = _new_report(repo, base_ref, do_fetch)
+    report = _new_report(repo, base_ref)
     if base_ref is None:
         return report
 
@@ -171,7 +166,6 @@ def analyse_merged_candidates(
     base_ref: str | None,
     identities: list[str],
     branch_filter: str | None,
-    do_fetch: bool,
 ) -> RepoReport:
     """Remote branches, each marked a deletion candidate or not.
 
@@ -181,7 +175,7 @@ def analyse_merged_candidates(
     the gate. Both merged outcomes are reported, because a branch that is merged
     and must be kept is exactly the one a reader needs to see and not delete.
     """
-    report = _new_report(repo, base_ref, do_fetch)
+    report = _new_report(repo, base_ref)
     if base_ref is None:
         return report
 

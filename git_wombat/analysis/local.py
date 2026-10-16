@@ -8,7 +8,6 @@ from git_wombat.config import Config
 from git_wombat.discovery import list_worktrees
 from git_wombat.gitcmd import run_git
 from git_wombat.gitops import (
-    fetch_all,
     list_branches,
     refs_updated_at,
     stash_entries,
@@ -94,22 +93,20 @@ def worktree_status(worktree: Path) -> tuple[bool, str]:
 
 
 def analyse_local(
-    repo: Path, config: Config, base_ref: str | None, do_fetch: bool
+    repo: Path, config: Config, base_ref: str | None
 ) -> RepoReport:
     """Report on every worktree and every non-excluded local branch.
 
-    With ``do_fetch`` false this never writes anything and never contacts a
-    remote; it reports on whatever is already in ``.git``, stamping the age of
-    the last successful fetch so a stale answer is visibly stale.
+    This never writes anything and never contacts a remote: it reports on
+    whatever is already in ``.git``, stamping the age of the last successful
+    fetch so a stale answer is visibly stale. Whether a fetch was attempted this
+    run, and whether it succeeded, is the caller's to record.
     """
     report = RepoReport(path=repo, base_ref=base_ref)
 
-    if do_fetch:
-        ok, _when = fetch_all(repo)
-        report.fetch_failed = not ok
-    # Always stamp the age of the last successful fetch, whether or not this
-    # call fetched. Without this a --no-fetch run reports no time at all, so
-    # stale state becomes indistinguishable from fresh state.
+    # Always stamp the age of the last successful fetch. Without this a
+    # --no-fetch run reports no time at all, so stale state becomes
+    # indistinguishable from fresh state.
     report.fetched_at = refs_updated_at(repo)
 
     for path, branch_name in list_worktrees(repo):
@@ -144,7 +141,6 @@ def analyse_local(
             )
         )
 
-    _report_remote_health(repo, report, do_fetch)
     _report_stashes(repo, report)
 
     for branch in list_branches(repo):
@@ -167,32 +163,6 @@ def _always_excluded(name: str, base_ref: str | None) -> bool:
     if name in ("main", "master"):
         return True
     return base_ref is not None and name in (base_ref, base_ref.split("/")[-1])
-
-
-def _report_remote_health(repo: Path, report: RepoReport, do_fetch: bool) -> None:
-    """Report a missing remote, or one whose fetch failed.
-
-    These are the cases git can tell us about without a network round trip
-    beyond the fetch itself. Under ``--no-fetch`` no probe is made, so a
-    server-deleted project is undetectable and must not be implied either way.
-    """
-    remotes = run_git(repo, "remote").stdout.split()
-    if not remotes:
-        report.findings.append(
-            Finding(
-                branch=repo.name,
-                status=Status.UNREACHABLE,
-                detail="no remote configured",
-            )
-        )
-    elif do_fetch and report.fetch_failed:
-        report.findings.append(
-            Finding(
-                branch=repo.name,
-                status=Status.UNREACHABLE,
-                detail=f"fetch failed for {', '.join(remotes)}",
-            )
-        )
 
 
 def _report_stashes(repo: Path, report: RepoReport) -> None:

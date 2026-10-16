@@ -5,12 +5,13 @@ the plan assigned but never wired, or a correctness bug reachable in ordinary us
 """
 from pathlib import Path
 
+from git_wombat.analysis.health import report_remote_health
 from git_wombat.analysis.local import analyse_local, worktree_status
 from git_wombat.analysis.remote import analyse_merged_candidates, analyse_remote
 from git_wombat.analysis.merged import merge_verdict
 from git_wombat.config import Config, identity_matches, resolve_identities
 from git_wombat.gitops import resolve_base_ref
-from git_wombat.models import Status
+from git_wombat.models import RepoReport, Status
 
 from tests.helpers import clone_local, commit, make_repo, run
 
@@ -33,7 +34,7 @@ def test_unmerged_remote_branch_is_not_reported_as_not_pushed(tmp_path):
     run(src, "checkout", "main")
     clone = clone_local(src, tmp_path / "clone")
     run(clone, "fetch", "--all", "--prune")
-    rep = analyse_merged_candidates(clone, Config(), _base(clone), [], None, False)
+    rep = analyse_merged_candidates(clone, Config(), _base(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/open")
     assert f.status is not Status.NOT_PUSHED
     assert f.status.MARKER == "[NOT MERGED]"
@@ -55,7 +56,7 @@ def test_other_remotes_main_is_not_silently_dropped(tmp_path):
     run(clone, "fetch", "--all", "--prune")
 
     assert _base(clone) == "origin/main"
-    rep = analyse_remote(clone, Config(), _base(clone), [], None, False)
+    rep = analyse_remote(clone, Config(), _base(clone), [], None)
     names = {f.branch for f in rep.findings}
     # origin/main is the base and is excluded; mirror/main is a different
     # branch and must still be listed.
@@ -70,16 +71,18 @@ def test_fetch_failure_produces_an_unreachable_finding(tmp_path):
     (repo / "f.txt").write_text("a\n")
     commit(repo, "base")
     run(repo, "remote", "add", "origin", "/nonexistent/path.git")
-    rep = analyse_local(repo, Config(), _base(repo), True)
-    assert any(f.status is Status.UNREACHABLE for f in rep.findings)
+    report = RepoReport(path=repo, fetch_attempted=True, fetch_failed=True)
+    report_remote_health(repo, report)
+    assert any(f.status is Status.UNREACHABLE for f in report.findings)
 
 
 def test_repo_without_a_remote_is_reported_unreachable(tmp_path):
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\n")
     commit(repo, "base")
-    rep = analyse_local(repo, Config(), _base(repo), False)
-    assert any(f.status is Status.UNREACHABLE for f in rep.findings)
+    report = RepoReport(path=repo, fetch_attempted=False)
+    report_remote_health(repo, report)
+    assert any(f.status is Status.UNREACHABLE for f in report.findings)
 
 
 # --- I4: stashes ----------------------------------------------------------------
@@ -90,7 +93,7 @@ def test_stashes_are_reported(tmp_path):
     commit(repo, "base")
     (repo / "f.txt").write_text("wip\n")
     run(repo, "stash", "push", "-m", "half-finished work")
-    rep = analyse_local(repo, Config(), _base(repo), False)
+    rep = analyse_local(repo, Config(), _base(repo))
     assert any(f.status is Status.STASH for f in rep.findings)
     stash = next(f for f in rep.findings if f.status is Status.STASH)
     assert "half-finished work" in stash.detail
@@ -100,7 +103,7 @@ def test_no_stash_is_not_reported(tmp_path):
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\n")
     commit(repo, "base")
-    rep = analyse_local(repo, Config(), _base(repo), False)
+    rep = analyse_local(repo, Config(), _base(repo))
     assert not any(f.status is Status.STASH for f in rep.findings)
 
 
@@ -113,7 +116,7 @@ def test_last_commit_age_is_carried_on_a_finding(tmp_path):
     run(src, "branch", "feat")
     clone = clone_local(src, tmp_path / "clone")
     run(clone, "checkout", "-b", "feat", "origin/feat")
-    rep = analyse_local(clone, Config(), _base(clone), False)
+    rep = analyse_local(clone, Config(), _base(clone))
     f = next(x for x in rep.findings if x.branch == "feat")
     assert "ago" in f.detail
 
@@ -129,7 +132,7 @@ def test_upstream_deleted_reports_unpushed_count(tmp_path):
     (clone / "local.txt").write_text("mine\n")
     commit(clone, "local only")
     run(clone, "update-ref", "-d", "refs/remotes/origin/gone-branch")
-    rep = analyse_local(clone, Config(), _base(clone), False)
+    rep = analyse_local(clone, Config(), _base(clone))
     f = next(x for x in rep.findings if x.branch == "gone-branch")
     assert f.status is Status.UPSTREAM_DELETED
     assert "unpushed" in f.detail.lower()
@@ -198,7 +201,7 @@ def test_merged_does_not_rescan_branches_per_candidate(tmp_path, monkeypatch):
         return original(repo)
 
     monkeypatch.setattr(remote_mod, "list_branches", counting)
-    analyse_merged_candidates(clone, Config(), _base(clone), [], None, False)
+    analyse_merged_candidates(clone, Config(), _base(clone), [], None)
     # Once for the shared snapshot, not once per merged candidate.
     assert len(calls) <= 2, f"list_branches called {len(calls)} times"
 

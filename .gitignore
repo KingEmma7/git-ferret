@@ -1,0 +1,70 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+.hypothesis/
+
+# Type checking and linting caches
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Distribution / packaging
+pip-wheel-metadata/
+
+# Environments and local config
+.env
+.env.*
+!.env.example
+
+# git-wombat local config. The shipped default documents the schema; this is
+# the personal file and stays untracked.
+.git-wombat.toml
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# NOTE: .git/ is deliberately NOT ignored. git-wombat analyses git
+# repositories, so treating it as ordinary build output would be wrong, and the
+# directory is already tracked implicitly as the repository itself.

@@ -229,3 +229,7 @@ $ pytest
 
 The test suite builds real git repositories and runs real `git` commands — no mocked git, because
 the behaviour worth protecting here is git's own.
+
+## Licence
+
+GPL-3.0-only. See [LICENSE](LICENSE).

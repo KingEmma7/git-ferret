@@ -163,6 +163,7 @@ def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
             continue
         report.fetch_attempted = attempted
         report.fetch_failed = failed
+        report_remote_health(repo, report)
         _emit_one(report, root, header_state)
 
     _emit_summary([], root)

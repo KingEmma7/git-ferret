@@ -85,6 +85,23 @@ def test_repo_without_a_remote_is_reported_unreachable(tmp_path):
     assert any(f.status is Status.UNREACHABLE for f in report.findings)
 
 
+def test_remote_and_merged_report_a_repo_without_a_remote(tmp_path, capsys):
+    # `local` reported a missing remote but `remote` and `merged` stayed silent:
+    # a repository with no remote produced a heading and nothing else, which
+    # reads as "nothing to clean" rather than "could not look".
+    from git_wombat.cli import run_command
+
+    repo = make_repo(tmp_path / "r")
+    (repo / "f.txt").write_text("a\n")
+    commit(repo, "base")
+
+    for command in ("remote", "merged"):
+        run_command(command, tmp_path, False, [], None)
+        out = capsys.readouterr().out
+        assert "[UNREACHABLE]" in out, command
+        assert "no remote configured" in out, command
+
+
 # --- I4: stashes ----------------------------------------------------------------
 
 def test_stashes_are_reported(tmp_path):

@@ -106,6 +106,18 @@ $ source .venv/bin/activate
 $ git-wombat local ~/src                    # once activated
 ```
 
+With [uv](https://docs.astral.sh/uv/) you need no environment of your own:
+
+```console
+$ uv run git-wombat local ~/src                    # editable install in .venv
+$ uvx --with-editable . git-wombat local ~/src     # isolated, leaves no .venv
+```
+
+Both run the code in your checkout, so an edit takes effect on the next command. The second form keeps
+its environment in uv's cache instead of in the project, which is useful when you want the checkout
+run but nothing written beside it. `uvx --from .` looks like it does the same thing and does not: it
+builds a snapshot of the directory and caches that, so later edits are not picked up.
+
 ### Check your install
 
 ```console

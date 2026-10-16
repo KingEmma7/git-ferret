@@ -9,7 +9,6 @@ from git_wombat.analysis.merged import (
     merge_verdict,
     remote_branches,
 )
-from git_wombat.gitops import is_shallow
 
 from tests.helpers import clone_local, commit, make_repo, run
 
@@ -103,7 +102,6 @@ def test_shallow_repo_is_unknown_not_merged(tmp_path):
     commit(src, "feature work")
     run(src, "checkout", "main")
     clone = clone_local(src, tmp_path / "shallow", depth=1)
-    assert is_shallow(clone) is True
     assert (
         merge_verdict(clone, "origin/main", "origin/feature")
         is not MergeVerdict.MERGED

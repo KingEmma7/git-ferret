@@ -105,11 +105,6 @@ def tree_hash(repo: Path, ref: str) -> str | None:
     return proc.stdout.strip() or None
 
 
-def is_shallow(repo: Path) -> bool:
-    """Whether the repository is a shallow clone with possibly-absent bases."""
-    return run_git_text(repo, "rev-parse", "--is-shallow-repository") == "true"
-
-
 def stash_entries(repo: Path) -> list[str]:
     """One description line per stash entry, newest first."""
     output = run_git_text(repo, "stash", "list")

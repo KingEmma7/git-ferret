@@ -3,7 +3,6 @@ from git_wombat.gitops import (
     base_ref_is_remote,
     fetch_all,
     fetch_head_mtime,
-    is_shallow,
     list_branches,
     resolve_base_ref,
     tree_hash,
@@ -177,18 +176,6 @@ def test_list_branches_carries_last_commit_age(tmp_path):
     commit(repo, "base")
     branches = {b.name: b for b in list_branches(repo)}
     assert "ago" in branches["main"].last_commit_rel
-
-
-def test_is_shallow_false_for_full_clone(tmp_path):
-    assert is_shallow(make_repo(tmp_path / "r")) is False
-
-
-def test_is_shallow_true_for_depth_clone(tmp_path):
-    src = make_repo(tmp_path / "src")
-    (src / "f.txt").write_text("a\n")
-    commit(src, "base")
-    clone = clone_local(src, tmp_path / "shallow", depth=1)
-    assert is_shallow(clone) is True
 
 
 def test_stash_entries_empty_for_clean_repo(tmp_path):

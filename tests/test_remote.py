@@ -6,6 +6,7 @@ from git_wombat.analysis.remote import (
 )
 from git_wombat.config import Config
 from git_wombat.gitops import resolve_base_ref
+from git_wombat.models import Status
 
 from tests.helpers import clone_local, commit, make_repo, run
 
@@ -91,15 +92,15 @@ def _merged_repo(tmp_path):
     return clone
 
 
-def test_merged_branch_annotated_safe_when_no_local_unpushed(tmp_path):
+def test_merged_branch_marked_safe_when_no_local_unpushed(tmp_path):
     clone = _merged_repo(tmp_path)
     assert local_branch_unpushed(clone, "done") is False
     rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
     f = next(x for x in rep.findings if x.branch == "origin/done")
-    assert f.safe_to_delete is True
+    assert f.status is Status.SAFE_TO_DELETE
 
 
-def test_merged_branch_withheld_when_local_unpushed(tmp_path):
+def test_merged_branch_marked_unsafe_when_local_unpushed(tmp_path):
     # The gate that matters most: the remote branch is merged, but the user's
     # local copy of it holds work that exists nowhere else.
     clone = _merged_repo(tmp_path)
@@ -109,7 +110,8 @@ def test_merged_branch_withheld_when_local_unpushed(tmp_path):
     assert local_branch_unpushed(clone, "done") is True
     rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
     f = next(x for x in rep.findings if x.branch == "origin/done")
-    assert f.safe_to_delete is False
+    # Merged is not the claim being made here, so the marker must not be [OK].
+    assert f.status is Status.UNSAFE_TO_DELETE
     assert "unpushed" in f.detail.lower()
 
 
@@ -130,7 +132,7 @@ def test_merged_unmerged_branch_is_not_safe(tmp_path):
     run(clone, "fetch", "--all", "--prune")
     rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
     f = next(x for x in rep.findings if x.branch == "origin/open-work")
-    assert f.safe_to_delete is False
+    assert f.status is Status.NOT_MERGED
 
 
 def test_merged_conflicting_branch_is_not_safe(tmp_path):
@@ -147,7 +149,7 @@ def test_merged_conflicting_branch_is_not_safe(tmp_path):
     run(clone, "fetch", "--all", "--prune")
     rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
     f = next(x for x in rep.findings if x.branch == "origin/conflict")
-    assert f.safe_to_delete is False
+    assert f.status is Status.CONFLICTS
 
 
 def test_merged_never_marks_unknown_as_safe(tmp_path):
@@ -163,7 +165,31 @@ def test_merged_never_marks_unknown_as_safe(tmp_path):
     run(clone, "fetch", "--all", "--prune")
     rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
     f = next(x for x in rep.findings if x.branch == "origin/orphan")
-    assert f.safe_to_delete is False
+    assert f.status is Status.UNKNOWN
+
+
+def test_safe_to_delete_against_a_local_base_ref_is_marked_weaker(tmp_path):
+    # The one override: the claim is right, but it rests on a local main that may
+    # lag the server, so the glyph says "verify" rather than "safe".
+    src = make_repo(tmp_path / "src")
+    (src / "f.txt").write_text("a\nb\n")
+    commit(src, "base")
+    run(src, "checkout", "-b", "done")
+    (src / "f.txt").write_text("a\nDONE\n")
+    commit(src, "work")
+    run(src, "checkout", "main")
+    run(src, "merge", "--squash", "done")
+    commit(src, "merge done")
+    clone = clone_local(src, tmp_path / "clone")
+    run(clone, "fetch", "--all", "--prune")
+    # Strip origin/main from the clone so the base ref falls back to local main,
+    # which is a weaker claim than the remote's own.
+    run(clone, "update-ref", "-d", "refs/remotes/origin/main")
+    rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None, False)
+    f = next(x for x in rep.findings if x.branch == "origin/done")
+    assert f.status is Status.SAFE_TO_DELETE
+    assert f.emoji == Status.UNKNOWN.EMOJI
+    assert "verify against the remote" in f.detail
 
 
 def test_merged_respects_branch_filter(tmp_path):

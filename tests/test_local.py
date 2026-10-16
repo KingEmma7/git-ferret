@@ -35,6 +35,16 @@ def test_reports_clean_branch_as_ok(tmp_path):
     assert f.status is Status.OK
 
 
+def test_ok_says_nothing_beyond_the_marker(tmp_path):
+    # [OK] already means "nothing to see". Restating it in words gives a
+    # branch that is fine the same visual weight as one that needs work.
+    clone = _cloned_with_branch(tmp_path, "clean-branch")
+    rep = _report(clone)
+    f = next(x for x in rep.findings if x.branch == "clean-branch")
+    assert "pushed" not in f.detail
+    assert f.detail.startswith("last commit")
+
+
 def test_branch_without_upstream_is_not_pushed(tmp_path):
     # A branch that was never pushed is [NOT PUSHED], not clean.
     repo = make_repo(tmp_path / "r")

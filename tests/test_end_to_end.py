@@ -75,11 +75,30 @@ def test_every_finding_carries_a_marker(tmp_path):
             assert "[" in line and "]" in line, f"unmarked finding: {line}"
 
 
+def test_findings_are_not_dashed_off_from_their_marker(tmp_path):
+    root = _tree(tmp_path)
+    res = runner.invoke(build_parser(), ["local", str(root), "--no-fetch"])
+    for line in res.stdout.splitlines():
+        if line.startswith("- ") and "`" in line:
+            # `branch` [MARKER] detail: the marker delimits itself, so a
+            # separator in front of it is a third thing to read past.
+            assert "— " not in line, f"dashes still in the output: {line}"
+
+
 def test_merged_reports_the_merged_branch(tmp_path):
     root = _tree(tmp_path)
     res = runner.invoke(build_parser(), ["merged", str(root), "--no-fetch"])
     assert "origin/already-done" in res.stdout
     assert "safe to delete" in res.stdout
+
+
+def test_merged_marks_the_deletion_candidate_in_the_marker(tmp_path):
+    root = _tree(tmp_path)
+    res = runner.invoke(build_parser(), ["merged", str(root), "--no-fetch"])
+    # The point of the command: which branch can go, readable from the marker
+    # alone, without reading a line of detail.
+    assert "- 🗑️ `origin/already-done` [SAFE TO DELETE]" in res.stdout
+    assert "[OK]" not in res.stdout
 
 
 def test_merged_does_not_recommend_the_stale_branch(tmp_path):
@@ -116,3 +135,35 @@ def test_local_does_not_write_without_update(tmp_path):
     runner.invoke(build_parser(), ["local", str(root), "--no-fetch"])
     after = run(root / "project", "status", "--porcelain").stdout
     assert before == after
+
+
+def test_headings_are_relative_to_the_given_root(tmp_path):
+    root = _tree(tmp_path)
+    res = runner.invoke(build_parser(), ["local", str(root), "--no-fetch"])
+    headings = [ln for ln in res.stdout.splitlines() if ln.startswith("## ")]
+    assert sorted(headings) == ["## project", "## solo", "## src"]
+    assert str(root) not in res.stdout
+
+
+def test_scanning_a_single_repo_names_it_as_dot(tmp_path):
+    root = _tree(tmp_path)
+    res = runner.invoke(build_parser(), ["local", str(root / "solo"), "--no-fetch"])
+    assert "## .\n" in res.stdout
+
+
+def test_every_heading_is_preceded_by_a_blank_line(tmp_path):
+    root = _tree(tmp_path)
+    res = runner.invoke(build_parser(), ["local", str(root), "--no-fetch"])
+    # The terminal pads headings on the way out; the file must not depend on it.
+    for before, heading in zip(res.stdout.split("\n"), res.stdout.split("\n")[1:]):
+        if heading.startswith("## "):
+            assert before == "", f"no blank line above: {heading!r}"
+
+
+def test_every_heading_is_followed_by_its_fetch_line(tmp_path):
+    root = _tree(tmp_path)
+    res = runner.invoke(build_parser(), ["local", str(root), "--no-fetch"])
+    lines = res.stdout.split("\n")
+    headings = [i for i, line in enumerate(lines) if line.startswith("## ")]
+    for index in headings:
+        assert lines[index + 1] != "", f"title and its line split apart: {lines[index]!r}"

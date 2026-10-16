@@ -7,7 +7,7 @@ from git_wombat.models import Finding, RepoReport, Status
 
 def test_finding_defaults():
     f = Finding(branch="feat/x", status=Status.NOT_PUSHED)
-    assert f.detail == "" and f.emoji == "" and f.safe_to_delete is False
+    assert f.detail == "" and f.emoji == ""
 
 
 def test_repo_report_is_empty_by_default():
@@ -29,7 +29,17 @@ def test_status_values_are_exactly_the_documented_set():
         "STASH",
         "UNREACHABLE",
         "NO_BASE",
+        "SAFE_TO_DELETE",
+        "UNSAFE_TO_DELETE",
     }
+
+
+def test_marker_text_distinguishes_a_deletion_candidate_from_a_kept_branch():
+    # Both are merged branches. Reporting either of them as [OK] told the reader
+    # nothing about which one they were being invited to delete.
+    assert Status.SAFE_TO_DELETE.MARKER == "[SAFE TO DELETE]"
+    assert Status.UNSAFE_TO_DELETE.MARKER == "[UNSAFE TO DELETE]"
+    assert Status.OK.MARKER == "[OK]"
 
 
 def test_status_is_a_str_enum():
@@ -43,6 +53,24 @@ def test_status_marker_texts():
     assert Status.NOT_PUSHED.MARKER == "[NOT PUSHED]"
     assert Status.UPSTREAM_DELETED.MARKER == "[UPSTREAM DELETED]"
     assert Status.NO_BASE.MARKER == "[NO BASE]"
+
+
+def test_every_status_has_an_emoji():
+    # The table is keyed by the enum, so a status added without a glyph would
+    # raise here rather than render a blank space in the report.
+    assert all(status.EMOJI for status in Status)
+
+
+def test_no_two_statuses_share_an_emoji():
+    # Sharing is what made the glyphs useless: seven findings wearing a warning
+    # sign look alike at a glance, which is the only glance there is.
+    glyphs = [status.EMOJI for status in Status]
+    assert len(set(glyphs)) == len(glyphs)
+
+
+def test_marker_and_emoji_are_separate_concerns():
+    # The marker carries the meaning; the emoji is decoration and may be lost.
+    assert Status.OK.MARKER == "[OK]" and Status.OK.EMOJI == "✓"
 
 
 def test_repo_report_is_stale_only_when_nothing_was_refreshed():

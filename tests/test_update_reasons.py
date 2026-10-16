@@ -1,9 +1,17 @@
-"""Tests for the fast-forward reasons --update reports.
+"""Tests for the reasons --update declines to fast-forward, and where they land.
 
 "Not a fast-forward" must mean the branch genuinely diverged, not "we declined
 to try", or a reader cannot tell what state their branch is in.
+
+The update block itself reports only what it wrote. These reasons belong to the
+repository's own section, where they are findings among the rest, so that is
+where they are asserted.
 """
+from git_wombat.analysis.local import analyse_local
 from git_wombat.cli import fast_forward_worktrees
+from git_wombat.config import Config
+from git_wombat.gitops import resolve_base_ref
+from git_wombat.models import Status
 
 from tests.helpers import clone_local, commit, make_repo, run
 
@@ -21,14 +29,24 @@ def _behind_clone(tmp_path):
     return clone
 
 
-def test_dirty_worktree_explains_it_could_have_been_updated(tmp_path):
+def _finding(repo, status):
+    rep = analyse_local(repo, Config(), resolve_base_ref(repo), do_fetch=False)
+    return next(f for f in rep.findings if f.status is status)
+
+
+def _head(clone):
+    return run(clone, "rev-parse", "HEAD").stdout.strip()
+
+
+def test_dirty_worktree_is_reported_as_dirty_above(tmp_path):
     clone = _behind_clone(tmp_path)
     (clone / "wip.txt").write_text("x\n")
-    results = fast_forward_worktrees(clone)
-    line = next(r for r in results if "feat" in r)
-    assert "uncommitted changes" in line
-    assert "DIRTY" in line
-    assert "not a fast-forward" not in line
+
+    assert fast_forward_worktrees(clone) == []
+    finding = _finding(clone, Status.DIRTY)
+    assert "untracked" in finding.detail
+    # The point of the marker is that it stands for the reason on its own.
+    assert "DIRTY" in finding.status.MARKER
 
 
 def test_diverged_branch_is_reported_as_diverged(tmp_path):
@@ -47,30 +65,32 @@ def test_diverged_branch_is_reported_as_diverged(tmp_path):
     run(src, "checkout", "main")
     run(clone, "fetch", "--all", "--prune")
 
-    results = fast_forward_worktrees(clone)
-    line = next(r for r in results if "feat" in r)
-    assert "DIVERGED" in line
-    assert "diverged" in line
+    assert fast_forward_worktrees(clone) == []
+    finding = _finding(clone, Status.DIVERGED)
+    assert "1 ahead / 1 behind" in finding.detail
+    assert "cannot fast-forward" in finding.detail
 
 
-def test_up_to_date_branch_is_not_called_fast_forwarded(tmp_path):
+def test_worktree_with_no_upstream_is_reported_as_not_pushed(tmp_path):
+    clone = _behind_clone(tmp_path)
+    run(clone, "branch", "--unset-upstream")
+
+    assert fast_forward_worktrees(clone) == []
+    finding = _finding(clone, Status.NOT_PUSHED)
+    assert "no upstream configured" in finding.detail
+
+
+def test_up_to_date_branch_is_not_reported_as_updated(tmp_path):
     src = make_repo(tmp_path / "src")
     (src / "f.txt").write_text("a\n")
     commit(src, "base")
     clone = clone_local(src, tmp_path / "clone")
-    results = fast_forward_worktrees(clone)
-    line = next(r for r in results if "main" in r)
-    assert "already up to date" in line
-    assert "fast-forwarded" not in line
+
+    # Nothing to do is not something that happened.
+    assert fast_forward_worktrees(clone) == []
 
 
-def test_every_result_carries_a_marker(tmp_path):
-    src = make_repo(tmp_path / "src")
-    (src / "f.txt").write_text("a\n")
-    commit(src, "base")
-    clone = clone_local(src, tmp_path / "clone")
-    run(clone, "checkout", "-b", "solo")
-    results = fast_forward_worktrees(clone)
-    assert results
-    for line in results:
-        assert "[" in line and "]" in line, f"unmarked update result: {line}"
+def test_a_fast_forward_names_only_the_branch_that_moved(tmp_path):
+    clone = _behind_clone(tmp_path)
+
+    assert fast_forward_worktrees(clone) == ["feat"]

@@ -208,7 +208,7 @@ Overlapping findings collapse to **one line per branch** with a primary label, i
 (upstream deleted > diverged > not pushed), followed by supporting detail:
 
 ```
-- `wip/scratch` — ⚠ UPSTREAM DELETED (also 4 commits unpushed), last commit 11 months ago
+- `wip/scratch` 🧹 [UPSTREAM DELETED] also 4 commits unpushed · last commit 11 months ago
 ```
 
 A branch whose upstream was deleted is simultaneously ahead of an upstream that no longer exists;
@@ -380,20 +380,43 @@ emoji:
 | `[DETACHED]` | worktree HEAD is detached |
 | `[UNREACHABLE]` | remote missing, or fetch failed |
 | `[OK]` | no findings — the clean case, stated positively |
+| `[SAFE TO DELETE]` | merged into the base branch, nothing local depends on it: a deletion candidate |
+| `[UNSAFE TO DELETE]` | merged, but a same-named local branch has unpushed work: keep it |
 
-Every branch line carries a marker, so a reader never has to infer "no marker means fine".
+Every branch line carries a marker, so a reader never has to infer "no marker means fine". The two
+deletion markers are the point of `merged`: a branch that is merged and a branch that is merged *and
+safe* are different answers, and both are reported rather than one being withheld.
 
 ### Emoji
 
-Emoji are used as **decorative severity cues only, never load-bearing**. The bracketed marker above
-always carries the full meaning on its own; if a terminal lacks a glyph and renders tofu, no
-information is lost.
+Emoji are used as **decorative cues only, never load-bearing**. The bracketed marker above always
+carries the full meaning on its own; if a terminal lacks a glyph and renders tofu, no information is
+lost.
 
-| emoji | used for |
-|---|---|
-| `✓` | clean / safe to delete |
-| `⚠️` | needs attention |
-| `❌` | definite problem |
+There is **one glyph per status**, not one per severity. Three symbols across twelve statuses told
+the reader nothing at a glance, which is the only glance a long list gets; a distinct glyph each is
+what makes skimming possible.
+
+| emoji | used for | reads as |
+|---|---|---|
+| `✓` | `OK` | fine |
+| `⬆️` | `NOT_PUSHED` | commits waiting to go up |
+| `🔀` | `NOT_MERGED` | not in the base branch yet |
+| `↔️` | `DIVERGED` | local and upstream pulled apart |
+| `🧹` | `UPSTREAM_DELETED` | gone from the remote |
+| `💥` | `CONFLICTS` | the merge genuinely breaks |
+| `🔌` | `UNREACHABLE` | no route to the remote |
+| `❓` | `UNKNOWN` | cannot be determined |
+| `✏️` | `DIRTY` | uncommitted edits |
+| `📦` | `STASH` | work put aside |
+| `📍` | `DETACHED` | HEAD not on a branch |
+| `🧭` | `NO_BASE` | nothing to compare against |
+| `🗑️` | `SAFE_TO_DELETE` | a deletion candidate |
+| `🚫` | `UNSAFE_TO_DELETE` | merged, but keep it |
+
+One case carries a glyph other than its status would give it: a safe-to-delete claim resting on a
+local base ref is marked `❓`, because the claim is weaker than the marker says and the detail text
+says so too.
 
 Constraints that follow from how these render, all verified rather than assumed:
 
@@ -424,20 +447,38 @@ Shape:
 
 > ⚠️  2 of 4 repositories analysed from stale local state (no fetch this run)
 
-## ~/src/api-server
+## api-server
 fetched 2026-10-16 09:41:02 · base: origin/main
 
-- ⚠️ `feature/new-auth` — [NOT PUSHED] 3 commits ahead · last commit 4 months ago
-- ⚠️ `wip/scratch` — [UPSTREAM DELETED] also 4 commits unpushed · last commit 11 months ago
-- ✓ `fix/typo` — safe to delete: merged into origin/main, no unpushed local changes
-- ✓ `release/2.1` — [OK] fully pushed · last commit 2 weeks ago
-- ⚠️ worktree `../api-server-hotfix` — [DETACHED] clean
+- ⬆️ `feature/new-auth` [NOT PUSHED] 3 commits ahead · last commit 4 months ago
+- 🧹 `wip/scratch` [UPSTREAM DELETED] also 4 commits unpushed · last commit 11 months ago
+- ✓ `fix/typo` [OK] safe to delete: merged into origin/main, no unpushed local changes
+- ✓ `release/2.1` [OK] last commit 2 weeks ago
+- 📍 `../api-server-hotfix` [DETACHED] clean
 
-## ~/src/web-app
-skipped: no base branch (neither origin/main nor origin/master)
+## web-app
+no commits yet · skipped: no base branch (neither origin/main nor origin/master)
 
-- ❌ worktree `.` — [DIRTY] 4 files modified, 1 untracked
+- ✏️ `.` [DIRTY] 4 files modified, 1 untracked
 ```
+
+Headings are **relative to the scanned root**: the root the user typed is the part of the path they
+already know, so repeating it above every heading is noise that wraps. A repository that *is* the
+root is named `.`.
+
+**A finding line carries no separator** between the branch and its marker: `\`branch\` [MARKER] detail`.
+The marker delimits itself, so a dash in front of it is a third thing to read past.
+
+**A heading and the line under it are one unit.** The fetch stamp says where that repository's refs
+came from, so it sits directly beneath the name, with nothing between them, and a `skipped:` note
+joins that same line, because a second line would be one paragraph with the first and the renderer
+would glue them back together on screen. Repositories are separated from each other by one blank
+line.
+
+Spacing is a property of the report, not of the renderer: `rich` pads a heading with a blank line on
+its way to a terminal and writes nothing when stdout is a pipe, so a layout left to the renderer is
+formatted one way on screen and another in a file. The text therefore carries the blank lines
+between sections, and the terminal is rendered so the heading does not pad itself.
 
 Each repository heading carries **fetch age**. When a run reads entirely from stale local state,
 a warning is printed once at the top. A conclusion drawn from old refs must never be mistaken for a
@@ -455,12 +496,12 @@ always available even when the top-level warning is not triggered.
 
 ### Safe-to-delete annotations
 
-The tool never deletes. It may state *why* a remote branch looks safe to delete, and only when
-**all** of these hold:
+The tool never deletes. It marks a remote branch `[SAFE TO DELETE]` only when **all** of these hold:
 
 1. **Merged**, per the tree test (never ancestry), against the base ref resolved above.
 2. **No unpushed local work on the branch.** If a local branch of the same name exists and its
-   upstream is not in sync with the remote branch, the branch is **not** safe and is not annotated.
+   upstream is not in sync with the remote branch, the branch is marked `[UNSAFE TO DELETE]` and the
+   reason is shown.
 
 Condition 2 is what makes the annotation trustworthy for the deletion the user is actually
 performing. `merged` analyses remote refs, and a remote branch tells you nothing about work sitting
@@ -472,10 +513,18 @@ The two conditions surface in the two commands that respectively own them, so a 
 is visible from both directions:
 
 - `local` tags the local branch `[NOT PUSHED]` / `[DIVERGED]`
-- `merged` withholds the safe-to-delete annotation for the corresponding remote branch
+- `merged` marks the corresponding remote branch `[UNSAFE TO DELETE]`
 
-Annotated inline as `✓ safe to delete: merged into origin/main, no unpushed local changes`. This is
-the payoff of doing the merge test properly.
+Both merged outcomes are reported, because a branch that is merged and must be kept is exactly the
+one a reader needs to see and not delete. The marker carries the verdict, so it is readable without
+reading a line of detail:
+
+```markdown
+- 🗑️ `origin/fix/typo` [SAFE TO DELETE] merged into origin/main, no unpushed local changes
+- 🚫 `origin/feat/auth` [UNSAFE TO DELETE] merged into origin/main, but local 'feat/auth' has unpushed changes
+```
+
+This is the payoff of doing the merge test properly.
 
 ### Exit codes
 

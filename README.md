@@ -6,7 +6,7 @@ Keep twenty or thirty repositories in one directory and the state rots quietly: 
 long ago and forgotten, upstream branches deleted server-side, work abandoned on a branch from four
 months back. Nothing surfaces it. Auditing repo by repo is too slow to do regularly.
 
-git-wombat answers *what is lying around, and what is safe to remove?* — and never removes anything
+git-wombat answers *what is lying around, and what is safe to remove?*, and never removes anything
 itself. You delete; it reports and explains.
 
 ```console
@@ -22,7 +22,7 @@ $ git-wombat local ~/src --update
 ```
 
 Without that flag, every command is read-only. There is no code path that deletes, stashes,
-commits, resets, or rewrites anything — you can audit a directory of real repositories without
+commits, resets, or rewrites anything, so you can audit a directory of real repositories without
 touching them.
 
 `--update` fast-forwards worktrees that are clean and behind their upstream, and reports what it
@@ -31,15 +31,18 @@ did:
 ```markdown
 ## fast-forwarded
 
-- api-server: `feat/new-auth` — [OK] fast-forwarded
-- web-app: `main` — [OK] already up to date
-- worker: `wip` — [DIRTY] skipped: uncommitted changes (git could fast-forward these, if they do not overlap)
+- api-server: `feat/new-auth` fast-forwarded
+- web-app: `main` fast-forwarded
 ```
 
+Only what was updated. A worktree that was left alone is not an update, so it does not appear here:
+its state is already reported in that repository's own section, where `[DIRTY]`, `[DETACHED]`,
+`[NOT PUSHED] no upstream configured` and `[DIVERGED]` sit among the other findings. Nothing is lost
+by not repeating it, and the block stays the short record of what this run wrote.
+
 A worktree with uncommitted changes is skipped rather than updated. Git would in fact allow that
-when the incoming changes touch different files — it refuses only when they would overwrite your
-edits — but skipping keeps this tool from moving a working tree that has unsaved work, and it keeps
-`skipped: uncommitted changes` in the report as a reminder that the worktree holds something.
+when the incoming changes touch different files, as it refuses only when they would overwrite your
+edits, but skipping keeps this tool from moving a working tree that has unsaved work.
 
 ## Install
 
@@ -66,7 +69,7 @@ To get the test suite as well:
 $ pip install -e ".[dev]"
 ```
 
-If `python3 -m venv` fails with `ensurepip is not available`, your Python is missing the venv module —
+If `python3 -m venv` fails with `ensurepip is not available`, your Python is missing the venv module,
 on Debian and Ubuntu that is `apt install python3.14-venv`, matching your version. The environment has
 to be rebuilt afterwards. The uv route below avoids needing it at all.
 
@@ -133,13 +136,14 @@ $ .venv/bin/git-wombat local ~/src
 zsh: bad interpreter: /home/you/src/git-wombat/.venv/bin/python3.11: no such file or directory
 ```
 
-The environment is intact; its Python is gone. Every script installed into `.venv/bin` — `git-wombat`,
-`pytest`, `pip` — starts with the absolute path of the interpreter that created the environment. Once
+The environment is intact; its Python is gone. Every script installed into `.venv/bin`
+(`git-wombat`, `pytest`, `pip`) starts with the absolute path of the interpreter that created the
+environment. Once
 that interpreter is uninstalled, upgraded or switched (`pyenv` or `uv` changing versions, a Homebrew
 upgrade, the Python macOS ships changing), all of them fail the same way, and activating the
 environment does not help.
 
-Rebuild it. Nothing in `.venv` is unique — its contents come from `pyproject.toml`, plus anything you
+Rebuild it. Nothing in `.venv` is unique: its contents come from `pyproject.toml`, plus anything you
 installed into it by hand, which is worth listing first if you have:
 
 ```console
@@ -150,13 +154,13 @@ $ source .venv/bin/activate
 $ pip install -e .
 ```
 
-If the version named in the error is one you no longer want — `python3.11` when you are on
-`python3.13` — then `python3 -m venv .venv` builds the same broken environment again. Check what
+If the version named in the error is one you no longer want (`python3.11` when you are on
+`python3.13`), then `python3 -m venv .venv` builds the same broken environment again. Check what
 `python3` resolves to with `python3 --version`, or pin the version: `uv venv --python 3.13`.
 
 ## Three questions, three commands
 
-### `local` — what am I sitting on?
+### `local`: what am I sitting on?
 
 Branches checked out locally, plus worktree state: uncommitted changes, detached HEADs, stashes.
 
@@ -167,18 +171,23 @@ $ git-wombat local ~/src
 ```markdown
 # git-wombat
 
-## ~/src/api-server
+## api-server
 fetched 2026-10-16 09:41:02 · base: origin/main
 
-- ⚠️ `feat/new-auth` — [NOT PUSHED] 1 commits ahead · last commit 4 months ago
-- ✓ `feature/done` — [OK] fully pushed · last commit 2 weeks ago
-- ❌ `api-server` — [UNREACHABLE] fetch failed for origin
-- ⚠️ `api-server` — [STASH] stash@{0}: On main: refactor storage layer
+- ⬆️ `feat/new-auth` [NOT PUSHED] 1 commits ahead · last commit 4 months ago
+- ✓ `feature/done` [OK] last commit 2 weeks ago
+- 🔌 `api-server` [UNREACHABLE] fetch failed for origin
+- 📦 `api-server` [STASH] stash@{0}: On main: refactor storage layer
 ```
 
-### `remote` — which of my remote branches can go?
+Repository headings are relative to the directory you scanned, so the root you typed is not repeated
+above every one of them. A repository that *is* the root you scanned is named `.`. The line under a
+heading belongs to it, which is where that repository's refs came from, and repositories are
+separated from each other by a blank line.
 
-Remote branches, filtered by author or by name. Useful well beyond "my branches" — filter by a
+### `remote`: which of my remote branches can go?
+
+Remote branches, filtered by author or by name. Useful well beyond "my branches": filter by a
 ticket number and you get every branch for that ticket, whoever wrote it.
 
 ```console
@@ -186,9 +195,10 @@ $ git-wombat remote ~/src --author you@example.com
 $ git-wombat remote ~/src --branch ABC-123
 ```
 
-### `merged` — which remote branches are already in main?
+### `merged`: which remote branches are already in main?
 
-Remote branches whose changes are fully present in the base branch, so deleting them loses nothing.
+Remote branches whose changes are fully present in the base branch, marked as deletion candidates or
+not.
 
 ```console
 $ git-wombat merged ~/src
@@ -197,12 +207,16 @@ $ git-wombat merged ~/src
 ```markdown
 # git-wombat
 
-## ~/src/web-app
+## web-app
 fetched 2026-10-16 09:41:05 · base: origin/main
 
-- ⚠️ `origin/feat/new-auth` — [NOT MERGED] not merged
-- ✓ `origin/fix/typo` — [OK] safe to delete: merged into origin/main, no unpushed local changes
+- 🔀 `origin/feat/new-auth` [NOT MERGED] not merged
+- 🗑️ `origin/fix/typo` [SAFE TO DELETE] merged into origin/main, no unpushed local changes
 ```
+
+`[SAFE TO DELETE]` is the answer this command exists to give, in the marker rather than in a line of
+prose you have to read. A branch that is merged but must be kept comes out as
+`[UNSAFE TO DELETE]`, never as `[OK]`.
 
 ## Why it does not trust commit history
 
@@ -214,7 +228,7 @@ branch is an *ancestor* of main. That is wrong in a way that matters here:
 - A branch merged and later **reverted** stays an ancestor, so it reads as "merged" when its changes
   are gone.
 
-git-wombat instead asks the behavioural question — *would applying this branch change anything?* —
+git-wombat instead asks the behavioural question: *would applying this branch change anything?*
 by performing a real three-way merge in memory and comparing the result to the base tree:
 
 ```console
@@ -230,16 +244,17 @@ reason so you can judge it.
 
 ## Safe to delete means two things
 
-A branch is only annotated `safe to delete` when **both** hold:
+A branch is only marked `[SAFE TO DELETE]` when **both** hold:
 
 1. its changes are already in the base branch, **and**
 2. no local branch of the same name has unpushed commits.
 
 The second condition is the one that saves you. A remote branch tells you nothing about work sitting
-in a local branch of the same name:
+in a local branch of the same name, so a branch that fails it is reported as `[UNSAFE TO DELETE]`
+rather than quietly dropped or, worse, marked `[OK]`:
 
 ```markdown
-- ⚠️ `origin/fix/typo` — [OK] merged into origin/main, but local 'fix/typo' has unpushed changes
+- 🚫 `origin/fix/typo` [UNSAFE TO DELETE] merged into origin/main, but local 'fix/typo' has unpushed changes
 ```
 
 `local` reports the same branch as `[NOT PUSHED]`, so the problem is visible from both directions.
@@ -250,7 +265,7 @@ Conclusions drawn from old refs are the main way a tool like this could quietly 
 every repository carries the time of its last successful fetch:
 
 ```markdown
-## ~/src/api-server
+## api-server
 fetched 2026-10-16 09:41:02 · base: origin/main
 ```
 
@@ -258,7 +273,7 @@ When any repository was read without a successful fetch this run, a warning appe
 
 The base branch is always `origin/main` (or `origin/master`) when that exists, not your local copy.
 A local `main` forty commits behind would report live branches as unmerged and send you deleting
-live work. When no remote ref exists it falls back to the local one, and says so — that is a weaker
+live work. When no remote ref exists it falls back to the local one, and says so, which is a weaker
 claim, and the output treats it as one.
 
 ## Fetching
@@ -291,7 +306,7 @@ patterns = [
 ]
 ```
 
-A branch matching the whitelist is hidden from `local` **only when it is clean** — a whitelisted
+A branch matching the whitelist is hidden from `local` **only when it is clean**, so a whitelisted
 branch with unpushed commits or a dirty worktree still shows up. For `remote` and `merged` it is
 ignored outright.
 
@@ -309,22 +324,24 @@ Output is markdown. It prints nicely in a terminal and stays valid markdown when
 $ git-wombat local ~/src > report.md
 ```
 
-No ANSI escapes and no tables ever reach the file. Emoji are decorative only — the bracketed
+No ANSI escapes and no tables ever reach the file. Emoji are decorative only: the bracketed
 marker always carries the meaning on its own, so a terminal without an emoji font loses nothing.
 
 | Marker | Meaning |
 |---|---|
-| `[OK]` | Nothing to see — fully pushed, or clean |
+| `[OK]` | Nothing to see, or clean |
 | `[NOT PUSHED]` | Commits here that are not on the upstream |
 | `[NOT MERGED]` | Changes not yet in the base branch |
 | `[DIVERGED]` | Has both unpushed commits *and* missing upstream commits |
 | `[UPSTREAM DELETED]` | The upstream branch no longer exists on the remote |
 | `[CONFLICTS]` | Cannot be applied to the base branch cleanly |
-| `[UNKNOWN]` | Cannot be determined — shallow clone, unrelated histories |
+| `[UNKNOWN]` | Cannot be determined: shallow clone, unrelated histories |
 | `[DIRTY]` | Uncommitted changes in this worktree |
 | `[DETACHED]` | Worktree HEAD is detached |
 | `[STASH]` | Stashed work, with its message |
 | `[UNREACHABLE]` | No remote configured, or the fetch failed |
+| `[SAFE TO DELETE]` | Merged into the base branch, nothing local depends on it: a deletion candidate |
+| `[UNSAFE TO DELETE]` | Merged, but a same-named local branch has unpushed work: keep it |
 | `[NO BASE]` | No `main` or `master`; branch analysis skipped |
 
 `[UNKNOWN]` is deliberately distinct from `[CONFLICTS]`. A shallow clone may not have the merge base
@@ -338,7 +355,7 @@ diffing two reports rather than on exit status.
 | Exit code | Meaning |
 |---|---|
 | `0` | The run completed. Findings do **not** change this. |
-| `1` | Usage error — unknown command or flag, or a path that is not a directory. |
+| `1` | Usage error: unknown command or flag, or a path that is not a directory. |
 | `2` | Reserved for a failure that stopped the run before completing. |
 
 A repository that cannot be read is reported and skipped, not fatal.
@@ -357,7 +374,7 @@ $ pip install -e ".[dev]"
 $ pytest
 ```
 
-The test suite builds real git repositories and runs real `git` commands — no mocked git, because
+The test suite builds real git repositories and runs real `git` commands, no mocked git, because
 the behaviour worth protecting here is git's own.
 
 ## Licence

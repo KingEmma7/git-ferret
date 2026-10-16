@@ -2,6 +2,7 @@
 from git_wombat.config import (
     Config,
     identity_matches,
+    is_always_excluded,
     resolve_identities,
 )
 
@@ -30,16 +31,14 @@ def test_empty_whitelist_excludes_nothing():
     assert c.is_whitelisted("anything") is False
 
 
-def test_excluded_always_covers_main_and_master():
-    c = Config(whitelist=[])
-    assert c.is_excluded("main", None) is True
-    assert c.is_excluded("master", None) is True
-    assert c.is_excluded("feat/x", "origin/main") is False
+def test_always_excluded_covers_main_and_master():
+    assert is_always_excluded("main", None) is True
+    assert is_always_excluded("master", None) is True
+    assert is_always_excluded("feat/x", "origin/main") is False
 
 
-def test_excluded_covers_the_resolved_base_ref():
-    c = Config(whitelist=[])
-    assert c.is_excluded("origin/trunk", "origin/trunk") is True
+def test_always_excluded_covers_the_resolved_base_ref():
+    assert is_always_excluded("origin/trunk", "origin/trunk") is True
 
 
 def test_identity_precedence_cli_beats_toml(tmp_path):

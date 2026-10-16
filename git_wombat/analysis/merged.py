@@ -22,7 +22,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from git_wombat.gitcmd import run_git, run_git_text
-from git_wombat.gitops import is_shallow, tree_hash
+from git_wombat.gitops import tree_hash
 from git_wombat.models import CONFLICT_EXIT, MERGED_EXIT
 
 class MergeVerdict(StrEnum):
@@ -102,6 +102,6 @@ def commits_in_range(repo: Path, base_ref: str, branch_ref: str) -> list[str]:
     return [line.strip() for line in output.splitlines() if line.strip()]
 
 
-def branch_name_from_ref(ref: str, base_ref: str | None = None) -> str:
+def branch_name_from_ref(ref: str) -> str:
     """``origin/feature/x`` -> ``feature/x``."""
     return ref.split("/", 1)[1] if "/" in ref else ref

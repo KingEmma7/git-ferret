@@ -49,17 +49,3 @@ def run_git(repo: Path, *args: str, check: bool = False) -> CompletedProcess:
 def run_git_text(repo: Path, *args: str) -> str:
     """Run git, raising :class:`GitError` on failure, and return stdout stripped."""
     return run_git(repo, *args, check=True).stdout.strip()
-
-
-def git_available() -> bool:
-    """Whether a usable git is installed."""
-    try:
-        proc = subprocess.run(
-            ["git", "--version"],
-            capture_output=True,
-            text=True,
-            timeout=TIMEOUT_SECONDS,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return False
-    return proc.returncode == 0

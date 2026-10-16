@@ -207,8 +207,6 @@ def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
         report_remote_health(repo, report)
         emit(render_repo(report, root))
 
-    _emit_summary([], root)
-
 
 def run_command(command: str, path: Path, no_fetch: bool,
                 author: list[str] | None = None,

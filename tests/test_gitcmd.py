@@ -1,7 +1,7 @@
 """Tests for the git subprocess seam."""
 import pytest
 
-from git_wombat.gitcmd import GitError, git_available, run_git, run_git_text
+from git_wombat.gitcmd import GitError, run_git, run_git_text
 
 from tests.helpers import commit, make_repo
 
@@ -24,7 +24,3 @@ def test_run_git_check_false_does_not_raise(tmp_path):
     repo = make_repo(tmp_path / "r")
     proc = run_git(repo, "rev-parse", "does-not-exist")
     assert proc.returncode != 0
-
-
-def test_git_available():
-    assert git_available() is True

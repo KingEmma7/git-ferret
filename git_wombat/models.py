@@ -119,7 +119,6 @@ class WorktreeInfo:
 
     path: Path
     branch: str | None
-    is_bare: bool = False
     dirty: bool = False
     dirty_detail: str = ""
 

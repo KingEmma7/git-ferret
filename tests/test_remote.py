@@ -2,7 +2,6 @@
 from git_wombat.analysis.remote import (
     analyse_merged_candidates,
     analyse_remote,
-    local_branch_unpushed,
     local_branch_unpushed_map,
 )
 from git_wombat.config import Config
@@ -95,7 +94,7 @@ def _merged_repo(tmp_path):
 
 def test_merged_branch_marked_safe_when_no_local_unpushed(tmp_path):
     clone = _merged_repo(tmp_path)
-    assert local_branch_unpushed(clone, "done") is False
+    assert local_branch_unpushed_map(clone).get("done", False) is False
     rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/done")
     assert f.status is Status.SAFE_TO_DELETE
@@ -108,7 +107,7 @@ def test_merged_branch_marked_unsafe_when_local_unpushed(tmp_path):
     run(clone, "checkout", "-b", "done", "origin/done")
     (clone / "local-only.txt").write_text("mine\n")
     commit(clone, "local only")
-    assert local_branch_unpushed(clone, "done") is True
+    assert local_branch_unpushed_map(clone)["done"] is True
     rep = analyse_merged_candidates(clone, Config(), resolve_base_ref(clone), [], None)
     f = next(x for x in rep.findings if x.branch == "origin/done")
     # Merged is not the claim being made here, so the marker must not be [OK].
@@ -116,9 +115,9 @@ def test_merged_branch_marked_unsafe_when_local_unpushed(tmp_path):
     assert "unpushed" in f.detail.lower()
 
 
-def test_local_branch_unpushed_false_when_branch_absent(tmp_path):
+def test_unpushed_map_has_no_entry_for_an_absent_branch(tmp_path):
     clone = _merged_repo(tmp_path)
-    assert local_branch_unpushed(clone, "no-such-branch") is False
+    assert "no-such-branch" not in local_branch_unpushed_map(clone)
 
 
 def test_local_branch_with_no_upstream_counts_as_unpushed(tmp_path):

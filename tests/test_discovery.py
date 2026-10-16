@@ -1,7 +1,6 @@
 """Tests for repository and worktree discovery."""
 from git_wombat.discovery import (
     discover_repos,
-    is_bare,
     is_git_dir,
     is_submodule,
     list_worktrees,
@@ -38,10 +37,6 @@ def test_result_is_sorted_for_deterministic_output(tmp_path):
 
 def test_missing_root_returns_empty(tmp_path):
     assert discover_repos(tmp_path / "nope") == []
-
-
-def test_is_bare_false_for_normal_repo(tmp_path):
-    assert is_bare(make_repo(tmp_path / "r")) is False
 
 
 def test_is_submodule_false_for_real_repo(tmp_path):

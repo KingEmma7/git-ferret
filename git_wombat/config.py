@@ -21,6 +21,18 @@ DEFAULT_CONFIG_PATH = Path.home() / ".git-wombat.toml"
 ALWAYS_EXCLUDED = ("main", "master")
 
 
+def is_always_excluded(branch: str, base_ref: str | None) -> bool:
+    """Whether *branch* is ``main``, ``master``, or the resolved base ref.
+
+    The part of exclusion that does not depend on configuration. Callers that
+    treat whitelisted branches differently (``local`` keeps a whitelisted branch
+    when it has a real problem) add that on top rather than folding it in here.
+    """
+    if branch in ALWAYS_EXCLUDED:
+        return True
+    return base_ref is not None and branch in (base_ref, base_ref.split("/")[-1])
+
+
 def split_identities(values: Iterable[str]) -> list[str]:
     """Split comma-separated identity values and drop blank entries.
 
@@ -72,17 +84,6 @@ class Config:
         would silently hide branches the user meant to see.
         """
         return any(fnmatchcase(branch, pattern) for pattern in self.whitelist)
-
-    def is_excluded(self, branch: str, base_ref: str | None) -> bool:
-        """Whether *branch* should never appear in a report.
-
-        Covers ``main``, ``master``, the resolved base ref, and the whitelist.
-        """
-        if branch in ALWAYS_EXCLUDED:
-            return True
-        if base_ref is not None and branch in (base_ref, base_ref.split("/")[-1]):
-            return True
-        return self.is_whitelisted(branch)
 
 
 def resolve_identities(

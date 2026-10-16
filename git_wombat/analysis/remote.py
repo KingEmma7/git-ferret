@@ -19,7 +19,6 @@ from git_wombat.analysis.merged import (
     remote_branches,
 )
 from git_wombat.config import Config, identity_matches
-from git_wombat.gitcmd import run_git
 from git_wombat.gitops import (
     base_ref_is_remote,
     refs_updated_at,
@@ -28,7 +27,6 @@ from git_wombat.gitops import (
 from git_wombat.models import Finding, RepoReport, Status
 
 _STATUS_FOR_VERDICT = {
-    MergeVerdict.MERGED: Status.SAFE_TO_DELETE,
     # `merged` only ever iterates remote refs, so every branch it lists is
     # already pushed. Calling an unmerged remote branch "[NOT PUSHED]" would
     # tell the user they have unpushed work, which is a different claim.
@@ -54,23 +52,6 @@ def local_branch_unpushed_map(repo: Path) -> dict[str, bool]:
         b.name: not branch_status_is_clean(b)
         for b in list_branches(repo)
     }
-
-
-def local_branch_unpushed(repo: Path, branch: str) -> bool:
-    """Whether a local branch of this name holds work the remote does not.
-
-    This is the gate that keeps the tool from recommending deletion of a remote
-    branch while the user's local copy of the same name carries commits that
-    exist nowhere else. A branch with no configured upstream counts as unpushed:
-    the remote tells us nothing about where its work lives.
-    """
-    if run_git(repo, "rev-parse", "--verify", "--quiet",
-               f"refs/heads/{branch}").returncode != 0:
-        return False
-    info = {b.name: b for b in list_branches(repo)}.get(branch)
-    if info is None:
-        return False
-    return not branch_status_is_clean(info)
 
 
 def _candidate_refs(
@@ -186,14 +167,13 @@ def analyse_merged_candidates(
             continue
 
         verdict = merge_verdict(repo, base_ref, ref)
-        status = _STATUS_FOR_VERDICT[verdict]
         name = branch_name_from_ref(ref)
 
         if verdict is not MergeVerdict.MERGED:
             report.findings.append(
                 Finding(
                     branch=ref,
-                    status=status,
+                    status=_STATUS_FOR_VERDICT[verdict],
                     detail=_detail_for(verdict),
                 )
             )
@@ -212,12 +192,12 @@ def analyse_merged_candidates(
         report.findings.append(
             Finding(
                 branch=ref,
-                status=status,
+                status=Status.SAFE_TO_DELETE,
                 detail=_safe_detail(base_ref),
                 # A safe-to-delete claim resting on a local base ref is weaker
                 # than one resting on the remote's, and is marked as such. This
                 # is the one place a status is not quite the verdict.
-                emoji=(status.EMOJI if base_ref_is_remote(base_ref)
+                emoji=(Status.SAFE_TO_DELETE.EMOJI if base_ref_is_remote(base_ref)
                        else Status.UNKNOWN.EMOJI),
             )
         )

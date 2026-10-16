@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from git_wombat.config import Config
+from git_wombat.config import Config, is_always_excluded
 from git_wombat.discovery import list_worktrees
 from git_wombat.gitcmd import run_git
 from git_wombat.gitops import (
@@ -147,7 +147,7 @@ def analyse_local(
     _report_stashes(repo, report)
 
     for branch in list_branches(repo):
-        if _always_excluded(branch.name, base_ref):
+        if is_always_excluded(branch.name, base_ref):
             # `main`, `master`, and the base ref are never listed as branches.
             continue
         if config.is_whitelisted(branch.name) and branch_status_is_clean(branch):
@@ -159,13 +159,6 @@ def analyse_local(
             report.findings.append(finding)
 
     return report
-
-
-def _always_excluded(name: str, base_ref: str | None) -> bool:
-    """``main``, ``master``, and the resolved base ref: never listed at all."""
-    if name in ("main", "master"):
-        return True
-    return base_ref is not None and name in (base_ref, base_ref.split("/")[-1])
 
 
 def _report_stashes(repo: Path, report: RepoReport) -> None:

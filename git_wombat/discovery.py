@@ -42,11 +42,6 @@ def is_submodule(path: Path) -> bool:
     return ".git/modules/" in f"{resolved}/" or "/.git/modules" in f"{resolved}"
 
 
-def is_bare(repo: Path) -> bool:
-    """Whether *repo* is a bare repository, which this tool does not analyse."""
-    return run_git_text(repo, "rev-parse", "--is-bare-repository") == "true"
-
-
 def _gitdir_target(path: Path) -> Path | None:
     """The git directory a ``.git`` *file* points at, if this is a worktree.
 

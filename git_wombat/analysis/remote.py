@@ -10,12 +10,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from git_wombat.analysis.local import (
-    EMOJI_ERROR,
-    EMOJI_OK,
-    EMOJI_WARN,
-    NO_BASE_REASON,
-)
+from git_wombat.analysis.local import NO_BASE_REASON
 from git_wombat.analysis.merged import (
     MergeVerdict,
     branch_name_from_ref,
@@ -34,7 +29,7 @@ from git_wombat.gitops import (
 from git_wombat.models import Finding, RepoReport, Status
 
 _STATUS_FOR_VERDICT = {
-    MergeVerdict.MERGED: Status.OK,
+    MergeVerdict.MERGED: Status.SAFE_TO_DELETE,
     # `merged` only ever iterates remote refs, so every branch it lists is
     # already pushed. Calling an unmerged remote branch "[NOT PUSHED]" would
     # tell the user they have unpushed work, which is a different claim.
@@ -79,8 +74,8 @@ def _candidate_refs(
     """Remote branch refs worth analysing.
 
     Excludes the base ref itself and ``main``/``master`` **on the base's own
-    remote**. A second remote's ``main`` is a different branch — often a fork's
-    trunk, and exactly the kind of divergence worth reporting — so it must not
+    remote**. A second remote's ``main`` is a different branch, often a fork's
+    trunk and exactly the kind of divergence worth reporting, so it must not
     be dropped just because its short name is "main".
     """
     base_remote = base_ref.split("/")[0] if base_ref and "/" in base_ref else None
@@ -133,7 +128,6 @@ def _new_report(repo: Path, base_ref: str | None, do_fetch: bool) -> RepoReport:
                 branch=repo.name,
                 status=Status.NO_BASE,
                 detail=NO_BASE_REASON,
-                emoji=EMOJI_WARN,
             )
         )
     return report
@@ -160,7 +154,6 @@ def analyse_remote(
                 branch=ref,
                 status=Status.OK,
                 detail="remote branch",
-                emoji=EMOJI_OK,
             )
         )
     return report
@@ -174,11 +167,13 @@ def analyse_merged_candidates(
     branch_filter: str | None,
     do_fetch: bool,
 ) -> RepoReport:
-    """Remote branches whose changes are already in the base branch.
+    """Remote branches, each marked a deletion candidate or not.
 
-    Merged-ness and deletability are separate claims. A branch can be genuinely
-    merged and still be unsafe to delete because a same-named local branch
-    holds unpushed work, so the annotation is withheld and the reason shown.
+    Merged-ness and deletability are separate claims, so they get separate
+    markers. A branch is a candidate when the merge is clean *and* no same-named
+    local branch holds unpushed work; the first is the merge test, the second is
+    the gate. Both merged outcomes are reported, because a branch that is merged
+    and must be kept is exactly the one a reader needs to see and not delete.
     """
     report = _new_report(repo, base_ref, do_fetch)
     if base_ref is None:
@@ -200,7 +195,6 @@ def analyse_merged_candidates(
                     branch=ref,
                     status=status,
                     detail=_detail_for(verdict),
-                    emoji=EMOJI_ERROR if verdict is MergeVerdict.CONFLICTS else EMOJI_WARN,
                 )
             )
             continue
@@ -209,10 +203,8 @@ def analyse_merged_candidates(
             report.findings.append(
                 Finding(
                     branch=ref,
-                    status=status,
+                    status=Status.UNSAFE_TO_DELETE,
                     detail=f"merged into {base_ref}, but local '{name}' has unpushed changes",
-                    emoji=EMOJI_WARN,
-                    safe_to_delete=False,
                 )
             )
             continue
@@ -222,8 +214,11 @@ def analyse_merged_candidates(
                 branch=ref,
                 status=status,
                 detail=_safe_detail(base_ref),
-                emoji=EMOJI_OK if base_ref_is_remote(base_ref) else EMOJI_WARN,
-                safe_to_delete=True,
+                # A safe-to-delete claim resting on a local base ref is weaker
+                # than one resting on the remote's, and is marked as such. This
+                # is the one place a status is not quite the verdict.
+                emoji=(status.EMOJI if base_ref_is_remote(base_ref)
+                       else Status.UNKNOWN.EMOJI),
             )
         )
     return report
@@ -240,7 +235,7 @@ def _safe_detail(base_ref: str | None) -> str:
     if base_ref_is_remote(base_ref):
         return f"safe to delete: merged into {base_ref}, no unpushed local changes"
     return (
-        f"merged into local {base_ref} (no remote ref to compare against) — "
+        f"merged into local {base_ref} (no remote ref to compare against), "
         "verify against the remote before deleting"
     )
 

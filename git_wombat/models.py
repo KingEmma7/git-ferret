@@ -33,6 +33,12 @@ class Status(StrEnum):
     STASH = "STASH"
     UNREACHABLE = "UNREACHABLE"
     NO_BASE = "NO_BASE"
+    # The two verdicts `merged` produces for a branch that is genuinely merged.
+    # They are statuses rather than a boolean on the finding because the marker
+    # is what a reader scans: a candidate and a branch that must be kept are
+    # not the same thing, and `[OK]` said they were.
+    SAFE_TO_DELETE = "SAFE_TO_DELETE"
+    UNSAFE_TO_DELETE = "UNSAFE_TO_DELETE"
 
     @property
     def MARKER(self) -> str:
@@ -43,6 +49,36 @@ class Status(StrEnum):
         """
         return f"[{self.value.replace('_', ' ')}]"
 
+    @property
+    def EMOJI(self) -> str:
+        """The glyph for this status, so a list can be scanned by shape.
+
+        One per status, rather than three shared across all of them: with ⚠️ on
+        seven different findings it distinguished nothing at a glance, which is
+        the only job an emoji has once the marker is there.
+        """
+        return EMOJI_FOR[self]
+
+
+# Keyed by the enum rather than by its string, so a status added above without
+# a glyph here fails at import rather than quietly rendering nothing.
+EMOJI_FOR: dict[Status, str] = {
+    Status.OK: "✓",
+    Status.NOT_PUSHED: "⬆️",
+    Status.NOT_MERGED: "🔀",
+    Status.DIVERGED: "↔️",
+    Status.UPSTREAM_DELETED: "🧹",
+    Status.CONFLICTS: "💥",
+    Status.UNREACHABLE: "🔌",
+    Status.UNKNOWN: "❓",
+    Status.DIRTY: "✏️",
+    Status.STASH: "📦",
+    Status.DETACHED: "📍",
+    Status.NO_BASE: "🧭",
+    Status.SAFE_TO_DELETE: "🗑️",
+    Status.UNSAFE_TO_DELETE: "🚫",
+}
+
 
 @dataclass(frozen=True)
 class Finding:
@@ -50,13 +86,17 @@ class Finding:
 
     ``branch`` holds the display ref: a bare name for local analysis, an
     ``origin/x``-style ref for remote analysis.
+
+    ``emoji`` is an override, not a requirement: left blank it falls back to the
+    status's own glyph when the line is rendered, so a caller cannot forget it
+    and produce a line with no shape to scan. It exists for the one case where a
+    status is not quite the verdict being reported.
     """
 
     branch: str
     status: Status
     detail: str = ""
     emoji: str = ""
-    safe_to_delete: bool = False
 
 
 @dataclass

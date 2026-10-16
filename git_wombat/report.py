@@ -23,11 +23,17 @@ WARNING_EMOJI = "⚠️"
 def _line_for(finding: Finding) -> str:
     """One markdown list item: optional emoji, marker, branch, detail.
 
-    The emoji is prefixed only when present, and the marker always stands on
-    its own, so a missing glyph costs readability but never information.
+    The marker always stands on its own, so a missing glyph costs readability
+    but never information. No separator before the marker: ``[NOT PUSHED]``
+    delimits itself, and a dash between two self-delimiting parts is a third
+    thing to read past.
+
+    An emoji left blank falls back to the status's own glyph, so a list reads
+    by shape rather than by which call sites remembered to pass one. An override
+    is reserved for the one case where a status is not quite the verdict.
     """
-    emoji = f"{finding.emoji} " if finding.emoji else ""
-    parts = [f"{emoji}`{finding.branch}` — {finding.status.MARKER}"]
+    emoji = finding.emoji or finding.status.EMOJI
+    parts = [f"{emoji} `{finding.branch}` {finding.status.MARKER}"]
     if finding.detail:
         parts.append(finding.detail)
     return "- " + " ".join(parts)

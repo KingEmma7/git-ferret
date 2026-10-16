@@ -6,7 +6,7 @@ from pathlib import Path
 
 from git_wombat.config import Config
 from git_wombat.discovery import list_worktrees
-from git_wombat.gitcmd import run_git, run_git_text
+from git_wombat.gitcmd import run_git
 from git_wombat.gitops import (
     fetch_all,
     list_branches,
@@ -14,25 +14,6 @@ from git_wombat.gitops import (
     stash_entries,
 )
 from git_wombat.models import BranchInfo, Finding, RepoReport, Status, WorktreeInfo
-
-EMOJI_OK = "✓"
-EMOJI_WARN = "⚠️"
-EMOJI_ERROR = "❌"
-
-_EMOJI_FOR = {
-    Status.OK: EMOJI_OK,
-    Status.DIRTY: EMOJI_WARN,
-    Status.DETACHED: EMOJI_WARN,
-    Status.STASH: EMOJI_WARN,
-    Status.NOT_PUSHED: EMOJI_WARN,
-    Status.NOT_MERGED: EMOJI_WARN,
-    Status.DIVERGED: EMOJI_WARN,
-    Status.UPSTREAM_DELETED: EMOJI_WARN,
-    Status.CONFLICTS: EMOJI_ERROR,
-    Status.UNKNOWN: EMOJI_WARN,
-    Status.UNREACHABLE: EMOJI_ERROR,
-    Status.NO_BASE: EMOJI_WARN,
-}
 
 NO_BASE_REASON = "no base branch (neither origin/main, origin/master, main nor master)"
 
@@ -57,7 +38,7 @@ def branch_finding(branch: BranchInfo) -> Finding | None:
         return _finding(
             branch,
             Status.DIVERGED,
-            f"{branch.ahead} ahead, {branch.behind} behind — cannot fast-forward"
+            f"{branch.ahead} ahead / {branch.behind} behind, cannot fast-forward"
             + (f" · {age}" if age else ""),
         )
     if not branch.has_upstream:
@@ -66,7 +47,9 @@ def branch_finding(branch: BranchInfo) -> Finding | None:
     if branch.ahead > 0:
         return _finding(branch, Status.NOT_PUSHED,
                         f"{branch.ahead} commits ahead{' · ' + age if age else ''}")
-    return _finding(branch, Status.OK, f"fully pushed{' · ' + age if age else ''}")
+    # Nothing to say beyond the marker: this branch is not the problem, and a
+    # "fully pushed" line spends a finding's worth of attention restating that.
+    return _finding(branch, Status.OK, age)
 
 
 def _age_suffix(last_commit_rel: str) -> str:
@@ -80,7 +63,6 @@ def _finding(branch: BranchInfo, status: Status, detail: str) -> Finding:
         branch=branch.name,
         status=status,
         detail=detail,
-        emoji=_EMOJI_FOR[status],
     )
 
 
@@ -91,7 +73,7 @@ def worktree_status(worktree: Path) -> tuple[bool, str]:
     called a worktree clean while untracked files sat in it would be wrong.
 
     A status that cannot be read is reported as **dirty**, not clean. This value
-    gates the tool's only write, and a safety gate must fail closed — reporting
+    gates the tool's only write, and a safety gate must fail closed, so reporting
     an unreadable worktree as clean would let a fast-forward proceed on a
     worktree whose state is unknown.
     """
@@ -141,7 +123,6 @@ def analyse_local(
                     branch=str(path),
                     status=Status.DETACHED,
                     detail="detached HEAD",
-                    emoji=_EMOJI_FOR[Status.DETACHED],
                 )
             )
         if dirty:
@@ -150,7 +131,6 @@ def analyse_local(
                     branch=branch_name or str(path),
                     status=Status.DIRTY,
                     detail=detail,
-                    emoji=_EMOJI_FOR[Status.DIRTY],
                 )
             )
 
@@ -161,7 +141,6 @@ def analyse_local(
                 branch=repo.name,
                 status=Status.NO_BASE,
                 detail=NO_BASE_REASON,
-                emoji=_EMOJI_FOR[Status.NO_BASE],
             )
         )
 
@@ -204,7 +183,6 @@ def _report_remote_health(repo: Path, report: RepoReport, do_fetch: bool) -> Non
                 branch=repo.name,
                 status=Status.UNREACHABLE,
                 detail="no remote configured",
-                emoji=_EMOJI_FOR[Status.UNREACHABLE],
             )
         )
     elif do_fetch and report.fetch_failed:
@@ -213,7 +191,6 @@ def _report_remote_health(repo: Path, report: RepoReport, do_fetch: bool) -> Non
                 branch=repo.name,
                 status=Status.UNREACHABLE,
                 detail=f"fetch failed for {', '.join(remotes)}",
-                emoji=_EMOJI_FOR[Status.UNREACHABLE],
             )
         )
 
@@ -226,7 +203,6 @@ def _report_stashes(repo: Path, report: RepoReport) -> None:
                 branch=repo.name,
                 status=Status.STASH,
                 detail=entry,
-                emoji=_EMOJI_FOR[Status.STASH],
             )
         )
 

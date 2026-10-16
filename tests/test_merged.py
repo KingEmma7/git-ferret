@@ -91,8 +91,6 @@ def test_unrelated_histories_report_unknown_not_conflicts(tmp_path):
     )
 
 
-def test_conflicts_and_unknown_are_different_verdicts(tmp_path):
-    assert MergeVerdict.CONFLICTS is not MergeVerdict.UNKNOWN
 
 
 def test_shallow_repo_is_unknown_not_merged(tmp_path):

@@ -25,11 +25,6 @@ from git_wombat.gitcmd import run_git, run_git_text
 from git_wombat.gitops import is_shallow, tree_hash
 from git_wombat.models import CONFLICT_EXIT, MERGED_EXIT
 
-# git exits 128 when it refuses to merge unrelated histories, which means there
-# is no merge base at all. That is "cannot determine", not "conflicting".
-UNRELATED_EXIT = 128
-
-
 class MergeVerdict(StrEnum):
     """The outcome of applying *branch* to *base_ref*."""
 

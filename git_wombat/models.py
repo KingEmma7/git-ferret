@@ -96,12 +96,6 @@ class RepoReport:
     skipped_reason: str | None = None
     worktrees: list[WorktreeInfo] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
-    notes: list[str] = field(default_factory=list)
-
-    @property
-    def needs_base(self) -> bool:
-        """True when no base ref resolved, so merge-based analysis cannot run."""
-        return self.base_ref is None
 
     @property
     def is_stale(self) -> bool:

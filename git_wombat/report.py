@@ -52,9 +52,6 @@ def _render_repo(report: RepoReport) -> list[str]:
         meta.append(f"base: {report.base_ref}")
     lines.append(" · ".join(meta))
 
-    for note in report.notes:
-        lines.append(f"> {note}")
-
     if report.skipped_reason:
         lines.append(f"skipped: {report.skipped_reason}")
 

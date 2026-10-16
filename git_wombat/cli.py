@@ -157,9 +157,24 @@ def run_command(command: str, path: Path, no_fetch: bool,
     _run(ANALYSES[command], path, no_fetch, author or [], branch_filter)
 
 
+_HEADER_EMITTED = False
+
+
 def _emit_one(report) -> None:
-    """Stream one repository's section as soon as it is produced."""
-    emit(render_report([report], 1 if report.is_stale else 0))
+    """Stream one repository's section as soon as it is produced.
+
+    The document header and the stale warning are emitted once, on the first
+    repository, rather than repeated above every section. Staleness is marked
+    per repository in the heading itself, so nothing is lost by not repeating
+    the summary.
+    """
+    global _HEADER_EMITTED
+    text = render_report([report], 1 if (report.is_stale and not _HEADER_EMITTED) else 0)
+    if _HEADER_EMITTED:
+        text = text.split("\n", 1)[1].lstrip("\n")
+    else:
+        _HEADER_EMITTED = True
+    emit(text)
 
 
 def _emit_summary(updated: list) -> None:

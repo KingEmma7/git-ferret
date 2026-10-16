@@ -25,7 +25,12 @@ from git_wombat.analysis.merged import (
 )
 from git_wombat.config import Config, identity_matches
 from git_wombat.gitcmd import run_git
-from git_wombat.gitops import fetch_all, fetch_head_mtime, list_branches
+from git_wombat.gitops import (
+    base_ref_is_remote,
+    fetch_all,
+    fetch_head_mtime,
+    list_branches,
+)
 from git_wombat.models import Finding, RepoReport, Status
 
 _STATUS_FOR_VERDICT = {
@@ -216,12 +221,28 @@ def analyse_merged_candidates(
             Finding(
                 branch=ref,
                 status=status,
-                detail=f"safe to delete: merged into {base_ref}, no unpushed local changes",
-                emoji=EMOJI_OK,
+                detail=_safe_detail(base_ref),
+                emoji=EMOJI_OK if base_ref_is_remote(base_ref) else EMOJI_WARN,
                 safe_to_delete=True,
             )
         )
     return report
+
+
+def _safe_detail(base_ref: str | None) -> str:
+    """Why the branch is safe, flagging the lower-confidence local fallback.
+
+    Comparing against a local base ref is a weaker claim than comparing against
+    the remote's: the local copy may lag the server, and a branch the server
+    already has would then look unmerged. That fallback is called out rather
+    than presented with the same confidence as a remote comparison.
+    """
+    if base_ref_is_remote(base_ref):
+        return f"safe to delete: merged into {base_ref}, no unpushed local changes"
+    return (
+        f"merged into local {base_ref} (no remote ref to compare against) — "
+        "verify against the remote before deleting"
+    )
 
 
 def _detail_for(verdict: MergeVerdict) -> str:

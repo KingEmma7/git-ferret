@@ -1,4 +1,5 @@
 """Tests for the shared finding and report models."""
+from datetime import datetime
 from pathlib import Path
 
 from git_wombat.models import Finding, RepoReport, Status
@@ -44,6 +45,10 @@ def test_status_marker_texts():
     assert Status.NO_BASE.MARKER == "[NO BASE]"
 
 
-def test_repo_report_needs_base_only_without_base_ref():
-    assert RepoReport(path=Path("/tmp/r"), base_ref=None).needs_base is True
-    assert RepoReport(path=Path("/tmp/r"), base_ref="origin/main").needs_base is False
+def test_repo_report_is_stale_only_when_nothing_was_refreshed():
+    # A successful fetch is fresh; an unfetched or failed one is not.
+    assert RepoReport(path=Path("/tmp/r")).is_stale is True
+    assert RepoReport(path=Path("/tmp/r"), fetch_attempted=False).is_stale is True
+    assert RepoReport(path=Path("/tmp/r"), fetch_failed=True).is_stale is True
+    fresh = RepoReport(path=Path("/tmp/r"), fetched_at=datetime(2026, 10, 16))
+    assert fresh.is_stale is False

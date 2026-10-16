@@ -147,8 +147,9 @@ Per repository, resolved in this order:
 
 1. `origin/main`, else `origin/master` — **preferred**, when the remote-tracking branch exists.
 2. Local `main`, else local `master`.
-3. Neither exists → skip the repository's branch analysis with a warning. Do not guess at
-   `develop`, `trunk`, or similar.
+3. Neither exists → report `[NO BASE]`. `remote` and `merged` then skip the repository's branch
+   analysis, because their verdicts are measured against the base; `local` still lists the branches,
+   because its findings are not. Do not guess at `develop`, `trunk`, or similar.
 
 The remote-tracking ref is preferred because `merged` recommends deleting **remote** branches, so
 the only question that matters is whether the branch is absorbed into the branch the remote actually
@@ -457,8 +458,9 @@ fetched 2026-10-16 09:41:02 · base: origin/main
 - 📍 `../api-server-hotfix` [DETACHED] clean
 
 ## web-app
-never fetched · skipped: no base branch (neither origin/main nor origin/master)
+never fetched
 
+- 🧭 `web-app` [NO BASE] no base branch (neither origin/main nor origin/master)
 - ✏️ `.` [DIRTY] 4 files modified, 1 untracked
 ```
 

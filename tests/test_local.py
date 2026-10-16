@@ -183,13 +183,18 @@ def test_reports_diverged_when_ahead_and_behind(tmp_path):
     assert f.status is Status.DIVERGED
 
 
-def test_no_base_branch_skips_with_reason(tmp_path):
+def test_no_base_branch_does_not_skip_the_branch_listing(tmp_path):
+    # Local branch status (pushed, dirty, ...) does not need a base branch, so
+    # `local` keeps listing branches. The missing base is still reported, but
+    # only `remote` and `merged`, which genuinely skip, may say "skipped".
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\n")
     commit(repo, "base")
     run(repo, "branch", "-m", "main", "trunk")
     rep = analyse_local(repo, Config(), None)
-    assert rep.skipped_reason is not None
+    assert rep.skipped_reason is None
+    assert any(f.status is Status.NO_BASE for f in rep.findings)
+    assert "trunk" in {f.branch for f in rep.findings}
 
 
 def test_worktrees_are_recorded_on_the_report(tmp_path):

@@ -132,7 +132,10 @@ def analyse_local(
             )
 
     if base_ref is None:
-        report.skipped_reason = NO_BASE_REASON
+        # A missing base is reported, but it does not skip anything here: local
+        # branch status (pushed, dirty, ...) is not measured against the base, so
+        # the branches are still listed. Only `remote` and `merged`, whose
+        # verdicts do depend on the base, mark the repository skipped.
         report.findings.append(
             Finding(
                 branch=repo.name,

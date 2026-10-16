@@ -342,7 +342,7 @@ marker always carries the meaning on its own, so a terminal without an emoji fon
 | `[UNREACHABLE]` | No remote configured, or the fetch failed |
 | `[SAFE TO DELETE]` | Merged into the base branch, nothing local depends on it: a deletion candidate |
 | `[UNSAFE TO DELETE]` | Merged, but a same-named local branch has unpushed work: keep it |
-| `[NO BASE]` | No `main` or `master`; branch analysis skipped |
+| `[NO BASE]` | No `main` or `master`; nothing to compare branches against |
 
 `[UNKNOWN]` is deliberately distinct from `[CONFLICTS]`. A shallow clone may not have the merge base
 locally, and reporting that as a conflict would invent a problem you do not have.

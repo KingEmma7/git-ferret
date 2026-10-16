@@ -120,13 +120,16 @@ def test_nested_repo_is_not_reported_twice(tmp_path):
     assert res.stdout.count("## ") == 1
 
 
-def test_repo_without_base_branch_is_skipped_with_reason(tmp_path):
+def test_repo_without_base_branch_states_the_reason(tmp_path):
     repo = make_repo(tmp_path / "trunky")
     (repo / "f.txt").write_text("a\n")
     commit(repo, "base")
     run(repo, "branch", "-m", "main", "trunk")
     res = runner.invoke(build_parser(), ["local", str(tmp_path), "--no-fetch"])
     assert "no base branch" in res.stdout
+    # `local` still lists branches, so its heading must not say it skipped the
+    # branch analysis; only `remote` and `merged` skip it.
+    assert "skipped" not in res.stdout
 
 
 def test_local_does_not_write_without_update(tmp_path):

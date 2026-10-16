@@ -1,0 +1,159 @@
+"""Tests for the tree-based merge verdict.
+
+These are the load-bearing tests of the whole tool: they decide whether a
+branch is recommended for deletion.
+"""
+from git_wombat.analysis.merged import (
+    MergeVerdict,
+    commits_in_range,
+    merge_verdict,
+    remote_branches,
+)
+from git_wombat.gitops import is_shallow
+
+from tests.helpers import clone_local, commit, make_repo, run
+
+
+def _clone_with_feature(tmp_path):
+    """src: main + feature. clone: both visible as remote branches."""
+    src = make_repo(tmp_path / "src")
+    (src / "f.txt").write_text("a\nb\nc\n")
+    commit(src, "base")
+    run(src, "checkout", "-b", "feature")
+    (src / "f.txt").write_text("a\nFEATURE\nc\n")
+    commit(src, "feature work")
+    run(src, "checkout", "main")
+    clone = clone_local(src, tmp_path / "clone")
+    run(clone, "fetch", "--all", "--prune")
+    return src, clone
+
+
+def test_squash_merged_branch_is_merged(tmp_path):
+    # Ancestry lies here: the branch is fully merged but not an ancestor.
+    src = make_repo(tmp_path / "src")
+    (src / "f.txt").write_text("a\nb\nc\n")
+    commit(src, "base")
+    run(src, "checkout", "-b", "feature")
+    (src / "f.txt").write_text("a\nFEATURE\nc\n")
+    commit(src, "feature work")
+    run(src, "checkout", "main")
+    run(src, "merge", "--squash", "feature")
+    commit(src, "squash merge")
+    clone = clone_local(src, tmp_path / "clone")
+    run(clone, "fetch", "--all", "--prune")
+    # Ancestry reports the branch as NOT merged:
+    ancestry = run(clone, "branch", "-r", "--merged", "origin/main").stdout
+    assert "origin/feature" not in ancestry
+    # The tree test reports the truth:
+    assert merge_verdict(clone, "origin/main", "origin/feature") is MergeVerdict.MERGED
+
+
+def test_unmerged_branch_is_not_merged(tmp_path):
+    _src, clone = _clone_with_feature(tmp_path)
+    assert (
+        merge_verdict(clone, "origin/main", "origin/feature")
+        is MergeVerdict.NOT_MERGED
+    )
+
+
+def test_conflicting_branch_reports_conflicts(tmp_path):
+    src = make_repo(tmp_path / "src")
+    (src / "f.txt").write_text("a\nb\nc\n")
+    commit(src, "base")
+    run(src, "checkout", "-b", "conflict")
+    (src / "f.txt").write_text("SIDE-A\nb\nc\n")
+    commit(src, "side a")
+    run(src, "checkout", "main")
+    (src / "f.txt").write_text("SIDE-B\nb\nc\n")
+    commit(src, "side b")
+    clone = clone_local(src, tmp_path / "clone")
+    run(clone, "fetch", "--all", "--prune")
+    assert (
+        merge_verdict(clone, "origin/main", "origin/conflict")
+        is MergeVerdict.CONFLICTS
+    )
+
+
+def test_unrelated_histories_report_unknown_not_conflicts(tmp_path):
+    # exit 128 means "no merge base", which is unknown, not a conflict.
+    src = make_repo(tmp_path / "src")
+    (src / "f.txt").write_text("a\n")
+    commit(src, "base")
+    run(src, "checkout", "--orphan", "orphan")
+    (src / "f.txt").write_text("zzz\n")
+    run(src, "add", "-A")
+    commit(src, "orphan")
+    run(src, "checkout", "main")
+    clone = clone_local(src, tmp_path / "clone")
+    run(clone, "fetch", "--all", "--prune")
+    assert (
+        merge_verdict(clone, "origin/main", "origin/orphan") is MergeVerdict.UNKNOWN
+    )
+
+
+def test_conflicts_and_unknown_are_different_verdicts(tmp_path):
+    assert MergeVerdict.CONFLICTS is not MergeVerdict.UNKNOWN
+
+
+def test_shallow_repo_is_unknown_not_merged(tmp_path):
+    # No merge base locally must never read as merged.
+    src = make_repo(tmp_path / "src")
+    (src / "f.txt").write_text("a\nb\n")
+    commit(src, "base")
+    run(src, "checkout", "-b", "feature")
+    (src / "f.txt").write_text("a\nb\nc\n")
+    commit(src, "feature work")
+    run(src, "checkout", "main")
+    clone = clone_local(src, tmp_path / "shallow", depth=1)
+    assert is_shallow(clone) is True
+    assert (
+        merge_verdict(clone, "origin/main", "origin/feature")
+        is not MergeVerdict.MERGED
+    )
+
+
+def test_remote_branches_lists_origin_refs(tmp_path):
+    _src, clone = _clone_with_feature(tmp_path)
+    refs = remote_branches(clone)
+    assert "origin/feature" in refs
+    assert "origin/main" in refs
+
+
+def test_remote_branches_excludes_head_symref(tmp_path):
+    _src, clone = _clone_with_feature(tmp_path)
+    assert "origin/HEAD" not in remote_branches(clone)
+
+
+def test_commits_in_range_excludes_base_history(tmp_path):
+    # Only the commits the branch introduces, or every branch would match the
+    # user, because their commits sit in the base branch's history.
+    src = make_repo(tmp_path / "src")
+    (src / "f.txt").write_text("a\n")
+    commit(src, "base", author="Fran <fran@z.com>")
+    run(src, "checkout", "-b", "theirs")
+    (src / "f.txt").write_text("a\ntheirs\n")
+    commit(src, "their work", author="Other <o@x.com>")
+    run(src, "checkout", "main")
+    clone = clone_local(src, tmp_path / "clone")
+    run(clone, "fetch", "--all", "--prune")
+    authors = commits_in_range(clone, "origin/main", "origin/theirs")
+    assert authors == ["Other <o@x.com>"]
+
+
+def test_merged_then_reverted_branch_reports_merged(tmp_path):
+    # A documented limitation: reverting does not remove ancestry, so the
+    # merge is a genuine no-op and the trees match.
+    src = make_repo(tmp_path / "src")
+    (src / "f.txt").write_text("a\nb\n")
+    commit(src, "base")
+    run(src, "checkout", "-b", "feat")
+    (src / "f.txt").write_text("a\nFEAT\n")
+    commit(src, "feat work")
+    run(src, "checkout", "main")
+    run(src, "merge", "--no-ff", "feat", "-m", "merge feat")
+    run(src, "revert", "--no-edit", "-m", "1", "HEAD")
+    clone = clone_local(src, tmp_path / "clone")
+    run(clone, "fetch", "--all", "--prune")
+    assert (
+        merge_verdict(clone, "origin/main", "origin/feat") is MergeVerdict.MERGED
+    )

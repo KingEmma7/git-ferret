@@ -1,5 +1,9 @@
 # git-ferret
 
+[![CI](https://img.shields.io/github/actions/workflow/status/fran2889/git-ferret/ci.yml?branch=main&label=build)](https://github.com/fran2889/git-ferret/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/v/release/fran2889/git-ferret)](https://github.com/fran2889/git-ferret/releases)
+[![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+
 Audit many local git repositories at once, and find the branches you can delete.
 
 Keep twenty or thirty repositories in one directory and the state rots quietly: branches pushed
@@ -367,12 +371,31 @@ $ diff ~/reports/yesterday.md ~/reports/today.md
 
 ## Development
 
-Assuming the environment from [Install](#install):
+Install the package with the dev tools, then run the checks:
 
 ```console
-$ pip install -e ".[dev]"
-$ pytest
+$ make install
+$ make check
 ```
+
+`make check` runs formatting, linting, type checking, and the test suite. The individual targets:
+
+| Command | What it does |
+|---|---|
+| `make format` / `make format-check` | Format, or check formatting, with ruff |
+| `make lint` / `make lint-fix` | Lint, or lint and apply safe fixes |
+| `make typecheck` | Type check with pyright (strict) |
+| `make test` | Run the test suite |
+| `make coverage` | Run the suite and write HTML and XML coverage reports |
+| `make build` | Build the sdist and wheel in `dist/` |
+| `make clean` | Remove build artifacts and caches |
+
+`make help` lists everything. Every target runs `python -m ...`, so `PYTHON` selects the
+interpreter: `make check PYTHON=.venv/bin/python` when the environment is not active.
+
+CI runs the same targets on every push and pull request: formatting and linting, pyright, the test
+suite on Python 3.11 through 3.14, coverage, a wheel build with a CLI smoke test, and a `pip-audit`
+scan. Releases are cut by release-please from Conventional Commits.
 
 The test suite builds real git repositories and runs real `git` commands, no mocked git, because
 the behaviour worth protecting here is git's own.

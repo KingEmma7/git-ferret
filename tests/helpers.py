@@ -1,8 +1,9 @@
 """Importable git fixture builders, shared by every test module.
 
-Test modules import these directly (``from tests.helpers import commit,
-make_repo, run``); ``tests/conftest.py`` re-exports ``make_repo`` and
-``clone_local`` as pytest fixtures.
+These are plain functions, not pytest fixtures: a test calls ``make_repo`` at
+the exact path it wants the repository at, which a fixture cannot do without
+inventing a second path to ask for one (``from tests.helpers import commit,
+make_repo, run``). There is no conftest to go with them.
 
 Fixture setup goes through the same ``git_ferret.gitcmd`` seam as the code
 under test. Nothing here touches ``subprocess``: ``gitcmd.py`` is the only
@@ -45,6 +46,21 @@ def commit(repo: Path, message: str, author: str = f"{DEV_NAME} <{DEV_EMAIL}>") 
 def run(repo: Path, *args: str) -> CompletedProcess:
     """Run git in *repo*, raising ``GitError`` if it fails."""
     return run_git(repo, *args, check=True)
+
+
+def add_branch_with_missing_commit(repo: Path, name: str) -> str:
+    """Point branch *name* at an object this repository does not have.
+
+    A ref whose target is gone is what a half-finished fetch, a pruned object
+    store or a hand-edited ref file leaves behind. Git still lists the branch,
+    and every command that needs the commit behind it fails, which is the state
+    the read-only paths have to keep reporting through.
+    """
+    sha = "1" * 40
+    ref = repo / ".git" / "refs" / "heads" / name
+    ref.parent.mkdir(parents=True, exist_ok=True)
+    ref.write_text(f"{sha}\n")
+    return sha
 
 
 def clone_local(src: Path, dest: Path, depth: int | None = None) -> Path:

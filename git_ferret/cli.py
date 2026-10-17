@@ -10,11 +10,13 @@ behind ``local --update``, which is off unless asked for.
 
 from __future__ import annotations
 
+import functools
 import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
 
+import click
 import typer
 
 from git_ferret.analysis.health import report_remote_health
@@ -41,7 +43,27 @@ ANALYSES: dict[str, Analysis] = {
 }
 
 
+def _aborts_on_interrupt(func: Callable[..., None]) -> Callable[..., None]:
+    """Turn Ctrl-C into the framework's own abort: one line, exit 1.
+
+    ``standalone_mode=False`` makes typer swallow ``KeyboardInterrupt`` instead
+    of letting it reach :func:`main`, so an interrupted scan exits 0 having
+    printed nothing. A report you script against has to tell an interrupted run
+    from a clean one, and silence is not a way to tell them apart.
+    """
+
+    @functools.wraps(func)
+    def wrapper(*args: object, **kwargs: object) -> None:
+        try:
+            func(*args, **kwargs)
+        except KeyboardInterrupt:
+            raise typer.Abort from None
+
+    return wrapper
+
+
 @app.command()
+@_aborts_on_interrupt
 def local(
     path: Path = typer.Argument(Path("."), help="Directory to scan recursively."),
     no_fetch: bool = typer.Option(
@@ -84,6 +106,7 @@ def local(
 
 
 @app.command()
+@_aborts_on_interrupt
 def remote(
     path: Path = typer.Argument(Path(".")),
     no_fetch: bool = typer.Option(False, "--no-fetch"),
@@ -97,6 +120,7 @@ def remote(
 
 
 @app.command()
+@_aborts_on_interrupt
 def merged(
     path: Path = typer.Argument(Path(".")),
     no_fetch: bool = typer.Option(False, "--no-fetch"),
@@ -116,6 +140,20 @@ def build_parser() -> typer.Typer:
 
 class UsageError(Exception):
     """A problem with how the tool was invoked, as opposed to what it found."""
+
+
+# Everything the entry point treats as "you typed it wrong": the tool's own
+# error, plus the framework's. typer has exposed its own exception hierarchy
+# since 0.27.2 -- the floor in pyproject.toml -- so an unknown flag or command
+# arrives as typer's, not click's, and an `except` clause written against
+# click's classes misses it entirely: the error escapes unhandled and the user
+# gets a traceback for a typo. Both stringify to the message the user needs,
+# which is why one handler covers them.
+_USAGE_ERRORS: tuple[type[Exception], ...] = (
+    UsageError,
+    typer.TyperException,
+    click.ClickException,
+)
 
 
 def _resolve_root(path: Path) -> Path:
@@ -284,29 +322,32 @@ def fast_forward_worktrees(repo: Path) -> list[str]:
 def main() -> None:
     """Entry point.
 
-    Click's default exit code for a usage error is 2, which reads like a crash
-    rather than "you typed it wrong". Everything the tool considers a usage
-    problem exits 1: a bad flag, an unknown command, or a path that is not a
-    directory. Findings never change the exit code.
-    """
-    from click.exceptions import Abort, Exit
-    from click.exceptions import UsageError as ClickUsageError
+    Everything this tool considers a usage problem -- a bad flag, an unknown
+    command, a path that is not a directory -- is one line on stderr and exit
+    1. Findings never change the exit code.
 
+    ``standalone_mode=False`` is what makes that possible: it hands the
+    framework's errors over instead of letting it print and exit itself. Without
+    it a mistyped flag escapes as an unhandled exception, which means a
+    traceback for what is a typo, and an exit code that is 1 only because
+    unhandled exceptions happen to be.
+
+    The same mode decides how an exit *code* comes back. Rather than raising,
+    typer returns it -- the command's own return value, or the code of any
+    ``typer.Exit`` it raised -- so the return value is what has to be read here.
+    """
     try:
-        app(standalone_mode=False)
-    except UsageError as exc:
+        code = app(standalone_mode=False)
+    except _USAGE_ERRORS as exc:
         _warn(f"error: {exc}")
         raise SystemExit(1) from None
-    except ClickUsageError as exc:
-        # An unknown flag or command. Click's own default is 2, which reads
-        # like a crash rather than "you typed it wrong".
-        exc.show()
-        raise SystemExit(1) from None
-    except Abort:
+    except typer.Abort:
         _warn("aborted")
         raise SystemExit(1) from None
-    except Exit as exc:
-        raise SystemExit(exc.exit_code) from None
+    # Every command is annotated `-> None`, so a return value here is the exit
+    # code of a `typer.Exit` a command raised deliberately. Anything else is a
+    # successful run.
+    raise SystemExit(code if isinstance(code, int) else 0)
 
 
 if __name__ == "__main__":

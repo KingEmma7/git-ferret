@@ -50,7 +50,7 @@ edits, but skipping keeps this tool from moving a working tree that has unsaved 
 
 ## Install
 
-Needs Python 3.11 or newer, and `git` on your `PATH`.
+Needs Python 3.14 or newer, and `git` on your `PATH`.
 
 ### From a checkout
 
@@ -67,10 +67,12 @@ On Windows the activation is `.venv\Scripts\activate`.
 `-e` installs in editable mode, so the command runs the code in your checkout and edits take effect
 without reinstalling. Drop it for a plain install, which copies the code into the environment.
 
-To get the test suite as well:
+To get the test suite and the tools behind `make check` as well, ask for the extras
+individually or let the Makefile install all of them at once:
 
 ```console
-$ pip install -e ".[dev]"
+$ pip install -e ".[test,type,lint]"   # just the checks
+$ make install                          # every extra, the same set the pipeline uses
 ```
 
 If `python3 -m venv` fails with `ensurepip is not available`, your Python is missing the venv module,
@@ -159,8 +161,8 @@ $ pip install -e .
 ```
 
 If the version named in the error is one you no longer want (`python3.11` when you are on
-`python3.13`), then `python3 -m venv .venv` builds the same broken environment again. Check what
-`python3` resolves to with `python3 --version`, or pin the version: `uv venv --python 3.13`.
+`python3.14`), then `python3 -m venv .venv` builds the same broken environment again. Check what
+`python3` resolves to with `python3 --version`, or pin the version: `uv venv --python 3.14`.
 
 ## Three questions, three commands
 
@@ -388,14 +390,22 @@ $ make check
 | `make test` | Run the test suite |
 | `make coverage` | Run the suite and write HTML and XML coverage reports |
 | `make build` | Build the sdist and wheel in `dist/` |
+| `make audit` | Scan dependencies for known vulnerabilities with `pip-audit` |
 | `make clean` | Remove build artifacts and caches |
+
+`make ci` runs everything the pipeline runs: the checks above plus `coverage`, `build`, and
+`audit`. It reaches the network, so it is slower than `make check`.
+
+`make audit` runs `pip-audit` twice, because a project path alone only covers the runtime
+dependencies: once over `pyproject.toml`, and once over the installed environment, which in CI
+is the `audit` extra's toolchain as well.
 
 `make help` lists everything. Every target runs `python -m ...`, so `PYTHON` selects the
 interpreter: `make check PYTHON=.venv/bin/python` when the environment is not active.
 
 CI runs the same targets on every push and pull request: formatting and linting, pyright, the test
-suite on Python 3.11 through 3.14, coverage, a wheel build with a CLI smoke test, and a `pip-audit`
-scan. Releases are cut by release-please from Conventional Commits.
+suite on Python 3.14, coverage, a wheel build with a CLI smoke test, and a `pip-audit` scan.
+Releases are cut by release-please from Conventional Commits.
 
 The test suite builds real git repositories and runs real `git` commands, no mocked git, because
 the behaviour worth protecting here is git's own.

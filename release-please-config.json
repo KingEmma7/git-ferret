@@ -1,0 +1,10 @@
+{
+    "packages": {
+        ".": {
+            "release-type": "python",
+            "package-name": "git-ferret",
+            "include-component-in-tag": false,
+            "draft": true
+        }
+    }
+}

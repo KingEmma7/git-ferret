@@ -1,0 +1,46 @@
+.DEFAULT_GOAL := help
+PYTHON ?= python3
+SOURCES := git_ferret tests
+
+.PHONY: help install format format-check lint lint-fix typecheck test coverage build clean check ci
+
+help: ## Show this help
+	@echo "Usage: make <target>"
+	@echo
+	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
+
+install: ## Install the package and dev tools (editable)
+	$(PYTHON) -m pip install -e ".[dev]"
+
+format: ## Format the code with ruff
+	$(PYTHON) -m ruff format $(SOURCES)
+
+format-check: ## Check formatting
+	$(PYTHON) -m ruff format --check $(SOURCES)
+
+lint: ## Lint with ruff
+	$(PYTHON) -m ruff check $(SOURCES)
+
+lint-fix: ## Lint and apply safe fixes
+	$(PYTHON) -m ruff check --fix $(SOURCES)
+
+typecheck: ## Type check with pyright (strict)
+	$(PYTHON) -m pyright --pythonpath "$$($(PYTHON) -c 'import sys; print(sys.executable)')"
+
+test: ## Run the test suite
+	$(PYTHON) -m pytest
+
+coverage: ## Run tests with a coverage report
+	$(PYTHON) -m pytest --cov --cov-report=term-missing --cov-report=xml --cov-report=html
+
+build: ## Build the sdist and wheel
+	rm -rf build dist
+	$(PYTHON) -m build
+	$(PYTHON) -m twine check dist/*
+
+clean: ## Remove build artifacts and caches
+	rm -rf build dist .pytest_cache .ruff_cache htmlcov .coverage coverage.xml
+
+check: format-check lint typecheck test ## Run the fast local checks
+
+ci: format-check lint typecheck coverage build ## Run everything the CI pipeline checks

@@ -13,7 +13,15 @@ license-files = ["LICENSE"]
 dependencies = ["typer>=0.12", "rich>=13", "click>=8.1"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=6",
+    "ruff~=0.17.1",
+    "pyright[nodejs]~=1.1.414",
+    "build>=1.3",
+    "twine>=6",
+    "pip-audit>=2.10",
+]
 
 [project.scripts]
 git-ferret = "git_ferret.cli:main"
@@ -23,3 +31,28 @@ include = ["git_ferret*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "RUF", "PLW1510"]
+
+[tool.ruff.lint.per-file-ignores]
+# Typer options are declared in parameter defaults by design.
+"git_ferret/cli.py" = ["B008"]
+
+[tool.pyright]
+include = ["git_ferret"]
+typeCheckingMode = "strict"
+pythonVersion = "3.11"
+reportMissingTypeStubs = false
+
+[tool.coverage.run]
+source = ["git_ferret"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 90

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import typer
@@ -31,7 +32,9 @@ from git_ferret.report import display_path, emit, render_header, render_repo
 
 app = typer.Typer(help="Audit many local git repositories at once. Reports only.")
 
-ANALYSES = {
+Analysis = Callable[[Path, Config, str | None, list[str], str | None], RepoReport]
+
+ANALYSES: dict[str, Analysis] = {
     "local": lambda repo, cfg, base, ids, bfilter: analyse_local(repo, cfg, base),
     "remote": analyse_remote,
     "merged": analyse_merged_candidates,
@@ -179,7 +182,11 @@ def _stale_counts(repos: list[Path], fetch_state: dict[Path, tuple[bool, bool]])
 
 
 def _run(
-    analysis, path: Path, no_fetch: bool, author: list[str] | None, branch_filter: str | None
+    analysis: Analysis,
+    path: Path,
+    no_fetch: bool,
+    author: list[str] | None,
+    branch_filter: str | None,
 ) -> None:
     config = Config.load()
     root = _resolve_root(path)
@@ -217,7 +224,7 @@ def run_command(
     _run(ANALYSES[command], path, no_fetch, author or [], branch_filter)
 
 
-def _emit_summary(updated: list, root: Path) -> None:
+def _emit_summary(updated: list[tuple[Path, str]], root: Path) -> None:
     """The record of what this run wrote, one line per fast-forward.
 
     No marker on these lines: the section says what they are, and a status

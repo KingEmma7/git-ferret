@@ -81,7 +81,7 @@ def _header_line(report: RepoReport) -> str:
     reaches the screen glued to the first with a space where the newline was,
     and the two spellings of the same report stop matching.
     """
-    parts = []
+    parts: list[str] = []
     if report.fetched_at is not None:
         stamp = report.fetched_at.strftime(TIMESTAMP_FORMAT)
         if report.fetch_failed:

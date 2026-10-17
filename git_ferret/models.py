@@ -133,8 +133,8 @@ class RepoReport:
     fetch_failed: bool = False
     fetch_attempted: bool = True
     skipped_reason: str | None = None
-    worktrees: list[WorktreeInfo] = field(default_factory=list)
-    findings: list[Finding] = field(default_factory=list)
+    worktrees: list[WorktreeInfo] = field(default_factory=list[WorktreeInfo])
+    findings: list[Finding] = field(default_factory=list[Finding])
 
     @property
     def is_stale(self) -> bool:

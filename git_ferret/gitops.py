@@ -93,7 +93,7 @@ def resolve_base_ref(repo: Path) -> str | None:
 
 def base_ref_is_remote(base_ref: str | None) -> bool:
     """Whether *base_ref* is a remote-tracking ref rather than a local one."""
-    return bool(base_ref) and "/" in base_ref
+    return base_ref is not None and "/" in base_ref
 
 
 def tree_hash(repo: Path, ref: str) -> str | None:
@@ -158,7 +158,7 @@ def list_branches(repo: Path) -> list[BranchInfo]:
         if not name:
             continue
         remote, upstream = configured_upstream(repo, name)
-        upstream_gone = bool(upstream) and not _ref_exists(repo, upstream)
+        upstream_gone = upstream is not None and not _ref_exists(repo, upstream)
 
         ahead = behind = 0
         if upstream:

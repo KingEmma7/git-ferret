@@ -60,7 +60,7 @@ def _candidate_refs(repo: Path, config: Config, base_ref: str | None) -> list[st
     be dropped just because its short name is "main".
     """
     base_remote = base_ref.split("/")[0] if base_ref and "/" in base_ref else None
-    candidates = []
+    candidates: list[str] = []
     for ref in remote_branches(repo):
         name = branch_name_from_ref(ref)
         remote = ref.split("/")[0] if "/" in ref else None

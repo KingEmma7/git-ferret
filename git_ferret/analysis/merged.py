@@ -77,7 +77,7 @@ def remote_branches(repo: Path) -> list[str]:
     being a branch of its own.
     """
     output = run_git_text(repo, "for-each-ref", "--format=%(refname)", "refs/remotes/")
-    refs = []
+    refs: list[str] = []
     for line in output.splitlines():
         ref = line.strip()
         if not ref or ref.endswith("/HEAD"):

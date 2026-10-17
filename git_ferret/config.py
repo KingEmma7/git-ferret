@@ -60,8 +60,8 @@ class Config:
     intent is "all of my addresses" rather than "a team".
     """
 
-    author: list[str] = field(default_factory=list)
-    whitelist: list[str] = field(default_factory=list)
+    author: list[str] = field(default_factory=list[str])
+    whitelist: list[str] = field(default_factory=list[str])
 
     @classmethod
     def load(cls, path: Path | None = None) -> Config:

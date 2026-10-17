@@ -15,7 +15,7 @@ TIMEOUT_SECONDS = 120
 
 # Re-exported so callers can name this return type without importing
 # ``subprocess`` outside this module.
-CompletedProcess = subprocess.CompletedProcess
+CompletedProcess = subprocess.CompletedProcess[str]
 
 
 class GitError(Exception):

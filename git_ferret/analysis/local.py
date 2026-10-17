@@ -89,7 +89,7 @@ def worktree_status(worktree: Path) -> tuple[bool, str]:
         return False, ""
     untracked = sum(1 for line in lines if line.startswith("??"))
     modified = len(lines) - untracked
-    parts = []
+    parts: list[str] = []
     if modified:
         parts.append(f"{modified} file{'s' if modified != 1 else ''} modified")
     if untracked:

@@ -3,16 +3,14 @@
 Each maps to a finding: a marker that misleads, a feature the spec requires and
 the plan assigned but never wired, or a correctness bug reachable in ordinary use.
 """
-from pathlib import Path
 
 from git_ferret.analysis.health import report_remote_health
 from git_ferret.analysis.local import analyse_local, worktree_status
-from git_ferret.analysis.remote import analyse_merged_candidates, analyse_remote
 from git_ferret.analysis.merged import merge_verdict
+from git_ferret.analysis.remote import analyse_merged_candidates, analyse_remote
 from git_ferret.config import Config, identity_matches, resolve_identities
 from git_ferret.gitops import resolve_base_ref
 from git_ferret.models import RepoReport, Status
-
 from tests.helpers import clone_local, commit, make_repo, run
 
 
@@ -21,6 +19,7 @@ def _base(repo):
 
 
 # --- I1: a remote branch is fully pushed by construction -----------------------
+
 
 def test_unmerged_remote_branch_is_not_reported_as_not_pushed(tmp_path):
     # `merged` iterates remote refs, so every branch it lists is pushed.
@@ -41,6 +40,7 @@ def test_unmerged_remote_branch_is_not_reported_as_not_pushed(tmp_path):
 
 
 # --- I2: a second remote's main/master is a real branch -----------------------
+
 
 def test_other_remotes_main_is_not_silently_dropped(tmp_path):
     origin_src = make_repo(tmp_path / "origin-src")
@@ -65,6 +65,7 @@ def test_other_remotes_main_is_not_silently_dropped(tmp_path):
 
 
 # --- I3: unreachable remote ----------------------------------------------------
+
 
 def test_fetch_failure_produces_an_unreachable_finding(tmp_path):
     repo = make_repo(tmp_path / "r")
@@ -104,6 +105,7 @@ def test_remote_and_merged_report_a_repo_without_a_remote(tmp_path, capsys):
 
 # --- I4: stashes ----------------------------------------------------------------
 
+
 def test_stashes_are_reported(tmp_path):
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\n")
@@ -125,6 +127,7 @@ def test_no_stash_is_not_reported(tmp_path):
 
 
 # --- I5: last commit age and the supporting detail ----------------------------
+
 
 def test_last_commit_age_is_carried_on_a_finding(tmp_path):
     src = make_repo(tmp_path / "src")
@@ -156,6 +159,7 @@ def test_upstream_deleted_reports_unpushed_count(tmp_path):
 
 
 # --- I6/I7: identity parsing ---------------------------------------------------
+
 
 def test_comma_separated_author_is_split(tmp_path):
     repo = make_repo(tmp_path / "r")
@@ -194,6 +198,7 @@ def test_blank_entries_are_dropped_but_real_ones_kept(tmp_path):
 
 # --- I8: the gate must not re-list branches per candidate ----------------------
 
+
 def test_merged_does_not_rescan_branches_per_candidate(tmp_path, monkeypatch):
     import git_ferret.analysis.remote as remote_mod
 
@@ -225,6 +230,7 @@ def test_merged_does_not_rescan_branches_per_candidate(tmp_path, monkeypatch):
 
 # --- I11: the cleanliness gate must fail closed --------------------------------
 
+
 def test_worktree_status_does_not_report_unreadable_as_clean(tmp_path):
     not_a_repo = tmp_path / "plain"
     not_a_repo.mkdir()
@@ -233,6 +239,7 @@ def test_worktree_status_does_not_report_unreadable_as_clean(tmp_path):
 
 
 # --- M1: shallow granularity ---------------------------------------------------
+
 
 def test_shallow_repo_reports_unknown_rather_than_conflicts(tmp_path):
     # A depth-1 clone genuinely lacks the merge base, so UNKNOWN is the honest

@@ -31,8 +31,11 @@ def branch_finding(branch: BranchInfo) -> Finding | None:
     if branch.upstream_gone:
         extra = f"also {branch.ahead} commits unpushed" if branch.ahead else None
         detail = " · ".join(p for p in (extra, age) if p)
-        return _finding(branch, Status.UPSTREAM_DELETED,
-                        f"upstream deleted on remote{' · ' + detail if detail else ''}")
+        return _finding(
+            branch,
+            Status.UPSTREAM_DELETED,
+            f"upstream deleted on remote{' · ' + detail if detail else ''}",
+        )
     if branch.ahead > 0 and branch.behind > 0:
         return _finding(
             branch,
@@ -41,11 +44,13 @@ def branch_finding(branch: BranchInfo) -> Finding | None:
             + (f" · {age}" if age else ""),
         )
     if not branch.has_upstream:
-        return _finding(branch, Status.NOT_PUSHED,
-                        f"no upstream configured{' · ' + age if age else ''}")
+        return _finding(
+            branch, Status.NOT_PUSHED, f"no upstream configured{' · ' + age if age else ''}"
+        )
     if branch.ahead > 0:
-        return _finding(branch, Status.NOT_PUSHED,
-                        f"{branch.ahead} commits ahead{' · ' + age if age else ''}")
+        return _finding(
+            branch, Status.NOT_PUSHED, f"{branch.ahead} commits ahead{' · ' + age if age else ''}"
+        )
     # Nothing to say beyond the marker: this branch is not the problem, and a
     # "fully pushed" line spends a finding's worth of attention restating that.
     return _finding(branch, Status.OK, age)
@@ -92,9 +97,7 @@ def worktree_status(worktree: Path) -> tuple[bool, str]:
     return True, ", ".join(parts)
 
 
-def analyse_local(
-    repo: Path, config: Config, base_ref: str | None
-) -> RepoReport:
+def analyse_local(repo: Path, config: Config, base_ref: str | None) -> RepoReport:
     """Report on every worktree and every non-excluded local branch.
 
     This never writes anything and never contacts a remote: it reports on

@@ -1,9 +1,9 @@
 """Tests for local branch and worktree analysis."""
+
 from git_ferret.analysis.local import analyse_local
 from git_ferret.config import Config
 from git_ferret.gitops import resolve_base_ref
 from git_ferret.models import Status
-
 from tests.helpers import commit, make_repo, run
 
 
@@ -92,8 +92,7 @@ def test_whitelisted_unpushed_branch_is_still_reported(tmp_path):
     commit(repo, "work")
     rep = _report(repo, Config(whitelist=["release/*"]))
     not_pushed = next(
-        f for f in rep.findings
-        if f.branch == "release/1.0" and f.status is Status.NOT_PUSHED
+        f for f in rep.findings if f.branch == "release/1.0" and f.status is Status.NOT_PUSHED
     )
     assert not_pushed is not None
 

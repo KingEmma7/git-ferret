@@ -1,4 +1,5 @@
 """Tests for remote branch filtering and safe-to-delete gating."""
+
 from git_ferret.analysis.remote import (
     analyse_merged_candidates,
     analyse_remote,
@@ -7,7 +8,6 @@ from git_ferret.analysis.remote import (
 from git_ferret.config import Config
 from git_ferret.gitops import resolve_base_ref
 from git_ferret.models import Status
-
 from tests.helpers import clone_local, commit, make_repo, run
 
 FRAN = "Fran <fran@z.com>"
@@ -34,9 +34,7 @@ def _names(rep):
 
 
 def test_remote_filters_by_branch_name(tmp_path):
-    clone = _repo_with_branches(
-        tmp_path, [("ABC-123-add-thing", FRAN), ("ZZZ-other", OTHER)]
-    )
+    clone = _repo_with_branches(tmp_path, [("ABC-123-add-thing", FRAN), ("ZZZ-other", OTHER)])
     rep = analyse_remote(clone, Config(), resolve_base_ref(clone), [], "ABC-123")
     assert "origin/ABC-123-add-thing" in _names(rep)
     assert "origin/ZZZ-other" not in _names(rep)
@@ -51,16 +49,13 @@ def test_remote_filters_by_author(tmp_path):
 
 def test_both_filters_combine_with_and(tmp_path):
     clone = _repo_with_branches(tmp_path, [("by-fran", FRAN), ("by-someone", OTHER)])
-    rep = analyse_remote(
-        clone, Config(), resolve_base_ref(clone), ["fran@z.com"], "by-fran"
-    )
+    rep = analyse_remote(clone, Config(), resolve_base_ref(clone), ["fran@z.com"], "by-fran")
     assert _names(rep) == {"origin/by-fran"}
 
 
 def test_remote_ignores_whitelisted_branches(tmp_path):
     clone = _repo_with_branches(tmp_path, [("release/9", FRAN)])
-    rep = analyse_remote(clone, Config(whitelist=["release/*"]), resolve_base_ref(clone),
-                         [], None)
+    rep = analyse_remote(clone, Config(whitelist=["release/*"]), resolve_base_ref(clone), [], None)
     assert "origin/release/9" not in _names(rep)
 
 

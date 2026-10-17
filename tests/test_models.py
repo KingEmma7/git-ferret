@@ -1,4 +1,5 @@
 """Tests for the shared finding and report models."""
+
 from datetime import datetime
 from pathlib import Path
 

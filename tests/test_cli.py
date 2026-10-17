@@ -1,4 +1,5 @@
 """Tests for the CLI surface."""
+
 from typer.testing import CliRunner
 
 from git_ferret.cli import build_parser

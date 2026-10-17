@@ -1,8 +1,8 @@
 """End-to-end coverage: all three subcommands over a realistic repository tree."""
+
 from typer.testing import CliRunner
 
 from git_ferret.cli import build_parser
-
 from tests.helpers import clone_local, commit, make_repo, run
 
 runner = CliRunner()
@@ -158,7 +158,7 @@ def test_every_heading_is_preceded_by_a_blank_line(tmp_path):
     root = _tree(tmp_path)
     res = runner.invoke(build_parser(), ["local", str(root), "--no-fetch"])
     # The terminal pads headings on the way out; the file must not depend on it.
-    for before, heading in zip(res.stdout.split("\n"), res.stdout.split("\n")[1:]):
+    for before, heading in zip(res.stdout.split("\n"), res.stdout.split("\n")[1:], strict=False):
         if heading.startswith("## "):
             assert before == "", f"no blank line above: {heading!r}"
 

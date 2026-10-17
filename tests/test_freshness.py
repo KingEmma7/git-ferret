@@ -5,6 +5,7 @@
 2. The base ref is resolved AFTER fetching, so `merged` judges branches against
    the branch the remote actually has.
 """
+
 from pathlib import Path
 
 import pytest
@@ -13,7 +14,6 @@ from git_ferret.analysis.merged import merge_verdict
 from git_ferret.cli import run_command
 from git_ferret.gitops import resolve_base_ref
 from git_ferret.models import RepoReport
-
 from tests.helpers import commit, make_repo, run
 
 

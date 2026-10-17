@@ -1,11 +1,12 @@
 """Tests for markdown report rendering."""
+
 import io
 import re
 from datetime import datetime
 from pathlib import Path
 
 from git_ferret.models import Finding, RepoReport, Status
-from git_ferret.report import emit, render_header, render_report, render_repo
+from git_ferret.report import emit, render_header, render_repo, render_report
 
 
 def _repo(**kwargs):
@@ -52,8 +53,7 @@ def test_render_uses_absolute_fetch_timestamp():
 def test_finding_line_puts_the_marker_straight_after_the_branch():
     rep = _repo()
     rep.findings.append(
-        Finding(branch="feat/x", status=Status.NOT_PUSHED, emoji="⬆️",
-                detail="3 commits ahead")
+        Finding(branch="feat/x", status=Status.NOT_PUSHED, emoji="⬆️", detail="3 commits ahead")
     )
     out = render_report([rep], stale_count=0)
     assert "- ⬆️ `feat/x` [NOT PUSHED] 3 commits ahead\n" in out
@@ -116,16 +116,15 @@ def test_render_shows_base_ref():
 
 
 def test_render_shows_skipped_reason():
-    rep = RepoReport(path=Path("/tmp/web"), base_ref=None,
-                     skipped_reason="no base branch")
+    rep = RepoReport(path=Path("/tmp/web"), base_ref=None, skipped_reason="no base branch")
     out = render_report([rep], stale_count=0)
     assert "no base branch" in out
 
 
 def test_every_repo_gets_a_heading_even_when_clean():
-    out = render_report([_repo(), RepoReport(path=Path("/tmp/clean"),
-                                             base_ref="origin/main")],
-                        stale_count=0)
+    out = render_report(
+        [_repo(), RepoReport(path=Path("/tmp/clean"), base_ref="origin/main")], stale_count=0
+    )
     assert "/tmp/api" in out and "/tmp/clean" in out
 
 
@@ -137,9 +136,12 @@ def test_starts_with_top_level_heading():
 def test_safe_to_delete_reason_is_shown():
     rep = _repo()
     rep.findings.append(
-        Finding(branch="origin/done", status=Status.SAFE_TO_DELETE,
-                detail="safe to delete: merged into origin/main",
-                emoji=Status.SAFE_TO_DELETE.EMOJI)
+        Finding(
+            branch="origin/done",
+            status=Status.SAFE_TO_DELETE,
+            detail="safe to delete: merged into origin/main",
+            emoji=Status.SAFE_TO_DELETE.EMOJI,
+        )
     )
     out = render_report([rep], stale_count=0)
     assert "safe to delete" in out
@@ -181,26 +183,28 @@ def test_findings_are_separated_from_the_fetch_line():
 
 
 def test_repos_are_separated_by_a_blank_line():
-    out = render_report([_repo(), RepoReport(path=Path("/tmp/web"),
-                                             base_ref="origin/main")],
-                        stale_count=0)
+    out = render_report(
+        [_repo(), RepoReport(path=Path("/tmp/web"), base_ref="origin/main")], stale_count=0
+    )
     assert "## /tmp/api\n" in out
     assert "\n\n## /tmp/web\n" in out
 
 
 def test_a_skipped_repo_is_separated_from_the_previous_one():
-    out = render_report([_repo(),
-                         RepoReport(path=Path("/tmp/web"), base_ref=None,
-                                    skipped_reason="no base branch")],
-                        stale_count=0)
+    out = render_report(
+        [
+            _repo(),
+            RepoReport(path=Path("/tmp/web"), base_ref=None, skipped_reason="no base branch"),
+        ],
+        stale_count=0,
+    )
     assert "## /tmp/api\n" in out and "\n\n## /tmp/web\n" in out
 
 
 def test_a_skip_reason_shares_the_header_line():
     # On a second source line it would be one paragraph with the header above
     # it, and the renderer would join them into one line on screen.
-    rep = RepoReport(path=Path("/tmp/web"), base_ref=None,
-                     skipped_reason="no base branch")
+    rep = RepoReport(path=Path("/tmp/web"), base_ref=None, skipped_reason="no base branch")
     out = render_report([rep], stale_count=0)
     assert "## /tmp/web\nnever fetched · skipped: no base branch\n" in out
 
@@ -209,8 +213,9 @@ def test_a_repo_that_was_never_fetched_is_not_called_empty():
     # fetched_at is None means there are no refs to date the state, which is a
     # local-only repository, not one without commits. "no commits yet" used to
     # contradict the `base: main` printed right beside it.
-    rep = RepoReport(path=Path("/tmp/local"), base_ref="main", fetched_at=None,
-                     fetch_attempted=False)
+    rep = RepoReport(
+        path=Path("/tmp/local"), base_ref="main", fetched_at=None, fetch_attempted=False
+    )
     out = render_report([rep], stale_count=1)
     assert "no commits yet" not in out
     assert "never fetched" in out
@@ -258,14 +263,12 @@ def test_streaming_one_repository_at_a_time_equals_the_whole_document():
     # about spacing, a report looks right on screen and wrong in a file.
     api = _repo()
     api.findings.append(Finding(branch="feat/x", status=Status.NOT_PUSHED))
-    web = RepoReport(path=Path("/tmp/web"), base_ref=None,
-                     skipped_reason="no base branch")
+    web = RepoReport(path=Path("/tmp/web"), base_ref=None, skipped_reason="no base branch")
 
     streamed = render_header(stale_count=0, total=2)
     streamed += render_repo(api, root=Path("/tmp")) + render_repo(web, root=Path("/tmp"))
 
-    assert streamed.rstrip() + "\n" == render_report([api, web], stale_count=0,
-                                                     root=Path("/tmp"))
+    assert streamed.rstrip() + "\n" == render_report([api, web], stale_count=0, root=Path("/tmp"))
 
 
 def test_screen_keeps_the_fetch_line_directly_under_the_title():
@@ -292,8 +295,7 @@ def test_screen_separates_findings_from_the_line_above_them():
 
 
 def test_screen_shows_a_skip_reason_where_the_file_does():
-    rep = RepoReport(path=Path("/tmp/web"), base_ref=None,
-                     skipped_reason="no base branch")
+    rep = RepoReport(path=Path("/tmp/web"), base_ref=None, skipped_reason="no base branch")
     lines = _on_screen(render_repo(rep))
     # Screen and file carry the same words, and the newline between them is
     # still a newline rather than a space.

@@ -4,8 +4,8 @@ A worktree whose directory sits beside its main repository (a common hotfix
 layout) has a `.git` file, so naive discovery reports the same repository twice
 and fetches it twice.
 """
-from git_ferret.discovery import discover_repos
 
+from git_ferret.discovery import discover_repos
 from tests.helpers import commit, make_repo, run
 
 

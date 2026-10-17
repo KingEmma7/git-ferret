@@ -21,8 +21,8 @@ from git_ferret.analysis.merged import (
 from git_ferret.config import Config, identity_matches
 from git_ferret.gitops import (
     base_ref_is_remote,
-    refs_updated_at,
     list_branches,
+    refs_updated_at,
 )
 from git_ferret.models import Finding, RepoReport, Status
 
@@ -48,15 +48,10 @@ def local_branch_unpushed_map(repo: Path) -> dict[str, bool]:
     to compare against) but still holds work that exists nowhere on the remote,
     which is precisely what this gate exists to protect.
     """
-    return {
-        b.name: not branch_status_is_clean(b)
-        for b in list_branches(repo)
-    }
+    return {b.name: not branch_status_is_clean(b) for b in list_branches(repo)}
 
 
-def _candidate_refs(
-    repo: Path, config: Config, base_ref: str | None
-) -> list[str]:
+def _candidate_refs(repo: Path, config: Config, base_ref: str | None) -> list[str]:
     """Remote branch refs worth analysing.
 
     Excludes the base ref itself and ``main``/``master`` **on the base's own
@@ -197,8 +192,11 @@ def analyse_merged_candidates(
                 # A safe-to-delete claim resting on a local base ref is weaker
                 # than one resting on the remote's, and is marked as such. This
                 # is the one place a status is not quite the verdict.
-                emoji=(Status.SAFE_TO_DELETE.EMOJI if base_ref_is_remote(base_ref)
-                       else Status.UNKNOWN.EMOJI),
+                emoji=(
+                    Status.SAFE_TO_DELETE.EMOJI
+                    if base_ref_is_remote(base_ref)
+                    else Status.UNKNOWN.EMOJI
+                ),
             )
         )
     return report

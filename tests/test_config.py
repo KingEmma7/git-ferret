@@ -1,11 +1,11 @@
 """Tests for config loading, identity resolution, and whitelist globbing."""
+
 from git_ferret.config import (
     Config,
     identity_matches,
     is_always_excluded,
     resolve_identities,
 )
-
 from tests.helpers import make_repo, run
 
 

@@ -3,13 +3,13 @@
 These are the load-bearing tests of the whole tool: they decide whether a
 branch is recommended for deletion.
 """
+
 from git_ferret.analysis.merged import (
     MergeVerdict,
     commits_in_range,
     merge_verdict,
     remote_branches,
 )
-
 from tests.helpers import clone_local, commit, make_repo, run
 
 
@@ -49,10 +49,7 @@ def test_squash_merged_branch_is_merged(tmp_path):
 
 def test_unmerged_branch_is_not_merged(tmp_path):
     _src, clone = _clone_with_feature(tmp_path)
-    assert (
-        merge_verdict(clone, "origin/main", "origin/feature")
-        is MergeVerdict.NOT_MERGED
-    )
+    assert merge_verdict(clone, "origin/main", "origin/feature") is MergeVerdict.NOT_MERGED
 
 
 def test_conflicting_branch_reports_conflicts(tmp_path):
@@ -67,10 +64,7 @@ def test_conflicting_branch_reports_conflicts(tmp_path):
     commit(src, "side b")
     clone = clone_local(src, tmp_path / "clone")
     run(clone, "fetch", "--all", "--prune")
-    assert (
-        merge_verdict(clone, "origin/main", "origin/conflict")
-        is MergeVerdict.CONFLICTS
-    )
+    assert merge_verdict(clone, "origin/main", "origin/conflict") is MergeVerdict.CONFLICTS
 
 
 def test_unrelated_histories_report_unknown_not_conflicts(tmp_path):
@@ -85,11 +79,7 @@ def test_unrelated_histories_report_unknown_not_conflicts(tmp_path):
     run(src, "checkout", "main")
     clone = clone_local(src, tmp_path / "clone")
     run(clone, "fetch", "--all", "--prune")
-    assert (
-        merge_verdict(clone, "origin/main", "origin/orphan") is MergeVerdict.UNKNOWN
-    )
-
-
+    assert merge_verdict(clone, "origin/main", "origin/orphan") is MergeVerdict.UNKNOWN
 
 
 def test_shallow_repo_is_unknown_not_merged(tmp_path):
@@ -102,10 +92,7 @@ def test_shallow_repo_is_unknown_not_merged(tmp_path):
     commit(src, "feature work")
     run(src, "checkout", "main")
     clone = clone_local(src, tmp_path / "shallow", depth=1)
-    assert (
-        merge_verdict(clone, "origin/main", "origin/feature")
-        is not MergeVerdict.MERGED
-    )
+    assert merge_verdict(clone, "origin/main", "origin/feature") is not MergeVerdict.MERGED
 
 
 def test_remote_branches_lists_origin_refs(tmp_path):
@@ -159,6 +146,4 @@ def test_merged_then_reverted_branch_reports_merged(tmp_path):
     run(src, "revert", "--no-edit", "-m", "1", "HEAD")
     clone = clone_local(src, tmp_path / "clone")
     run(clone, "fetch", "--all", "--prune")
-    assert (
-        merge_verdict(clone, "origin/main", "origin/feat") is MergeVerdict.MERGED
-    )
+    assert merge_verdict(clone, "origin/main", "origin/feat") is MergeVerdict.MERGED

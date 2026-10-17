@@ -41,10 +41,12 @@ ANALYSES = {
 @app.command()
 def local(
     path: Path = typer.Argument(Path("."), help="Directory to scan recursively."),
-    no_fetch: bool = typer.Option(False, "--no-fetch",
-                                   help="Skip fetching; use existing local state."),
+    no_fetch: bool = typer.Option(
+        False, "--no-fetch", help="Skip fetching; use existing local state."
+    ),
     update: bool = typer.Option(
-        False, "--update",
+        False,
+        "--update",
         help="Fast-forward clean worktrees. This is the only write this tool performs.",
     ),
 ) -> None:
@@ -72,8 +74,7 @@ def local(
         _stamp_fetch(report, fetch_state[repo])
         report_remote_health(repo, report)
         if update:
-            updated.extend((repo, branch)
-                           for branch in fast_forward_worktrees(repo))
+            updated.extend((repo, branch) for branch in fast_forward_worktrees(repo))
         emit(render_repo(report, root))
 
     _emit_summary(updated, root)
@@ -83,11 +84,10 @@ def local(
 def remote(
     path: Path = typer.Argument(Path(".")),
     no_fetch: bool = typer.Option(False, "--no-fetch"),
-    author: list[str] = typer.Option([], "--author",
-                                      help="Substring of 'Name <email>'. Repeatable, "
-                                           "or comma-separated."),
-    branch: str | None = typer.Option(None, "--branch",
-                                      help="Substring of the branch name."),
+    author: list[str] = typer.Option(
+        [], "--author", help="Substring of 'Name <email>'. Repeatable, or comma-separated."
+    ),
+    branch: str | None = typer.Option(None, "--branch", help="Substring of the branch name."),
 ) -> None:
     """Remote branches matching the filters."""
     _run(ANALYSES["remote"], path, no_fetch, author, branch)
@@ -97,11 +97,10 @@ def remote(
 def merged(
     path: Path = typer.Argument(Path(".")),
     no_fetch: bool = typer.Option(False, "--no-fetch"),
-    author: list[str] = typer.Option([], "--author",
-                                      help="Substring of 'Name <email>'. Repeatable, "
-                                           "or comma-separated."),
-    branch: str | None = typer.Option(None, "--branch",
-                                      help="Substring of the branch name."),
+    author: list[str] = typer.Option(
+        [], "--author", help="Substring of 'Name <email>'. Repeatable, or comma-separated."
+    ),
+    branch: str | None = typer.Option(None, "--branch", help="Substring of the branch name."),
 ) -> None:
     """Remote branches whose changes are already in the base branch."""
     _run(ANALYSES["merged"], path, no_fetch, author, branch)
@@ -159,9 +158,7 @@ def _stamp_fetch(report: RepoReport, fetch: tuple[bool, bool]) -> None:
     report.fetch_attempted, report.fetch_failed = fetch
 
 
-def _stale_counts(
-    repos: list[Path], fetch_state: dict[Path, tuple[bool, bool]]
-) -> tuple[int, int]:
+def _stale_counts(repos: list[Path], fetch_state: dict[Path, tuple[bool, bool]]) -> tuple[int, int]:
     """``(stale, total)`` for the top warning, over the whole run.
 
     Staleness is the report's own rule (nothing refreshed this run), evaluated
@@ -181,8 +178,9 @@ def _stale_counts(
     return stale, len(repos)
 
 
-def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
-         branch_filter: str | None) -> None:
+def _run(
+    analysis, path: Path, no_fetch: bool, author: list[str] | None, branch_filter: str | None
+) -> None:
     config = Config.load()
     root = _resolve_root(path)
 
@@ -208,9 +206,13 @@ def _run(analysis, path: Path, no_fetch: bool, author: list[str] | None,
         emit(render_repo(report, root))
 
 
-def run_command(command: str, path: Path, no_fetch: bool,
-                author: list[str] | None = None,
-                branch_filter: str | None = None) -> None:
+def run_command(
+    command: str,
+    path: Path,
+    no_fetch: bool,
+    author: list[str] | None = None,
+    branch_filter: str | None = None,
+) -> None:
     """Run one named subcommand's analysis over *path*."""
     _run(ANALYSES[command], path, no_fetch, author or [], branch_filter)
 
@@ -224,8 +226,9 @@ def _emit_summary(updated: list, root: Path) -> None:
     if not updated:
         return
     lines = ["## fast-forwarded", ""]
-    lines += [f"- {display_path(repo, root)}: `{branch}` fast-forwarded"
-              for repo, branch in updated]
+    lines += [
+        f"- {display_path(repo, root)}: `{branch}` fast-forwarded" for repo, branch in updated
+    ]
     emit("\n".join(lines) + "\n")
 
 
@@ -257,8 +260,9 @@ def fast_forward_worktrees(repo: Path) -> list[str]:
         status = run_git(worktree, "status", "--porcelain", check=False)
         if status.returncode != 0 or status.stdout.strip():
             continue
-        has_upstream = run_git(worktree, "rev-parse", "--verify", "--quiet",
-                               "@{upstream}").returncode == 0
+        has_upstream = (
+            run_git(worktree, "rev-parse", "--verify", "--quiet", "@{upstream}").returncode == 0
+        )
         if not has_upstream:
             continue
         behind = run_git(worktree, "rev-list", "--count", "HEAD..@{upstream}")
@@ -278,7 +282,8 @@ def main() -> None:
     problem exits 1: a bad flag, an unknown command, or a path that is not a
     directory. Findings never change the exit code.
     """
-    from click.exceptions import Abort, Exit, UsageError as ClickUsageError
+    from click.exceptions import Abort, Exit
+    from click.exceptions import UsageError as ClickUsageError
 
     try:
         app(standalone_mode=False)

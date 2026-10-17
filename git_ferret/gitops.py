@@ -19,7 +19,6 @@ from git_ferret.models import BranchInfo
 BASE_CANDIDATES = ("origin/main", "origin/master", "main", "master")
 
 
-
 def fetch_all(repo: Path) -> tuple[bool, datetime | None]:
     """``git fetch --all --prune``, never raising.
 
@@ -153,8 +152,7 @@ def list_branches(repo: Path) -> list[BranchInfo]:
     is not "no upstream": it is a deleted upstream, which is a different
     finding and the reason pruning matters.
     """
-    names = run_git_text(repo, "for-each-ref", "--format=%(refname:short)",
-                         "refs/heads/")
+    names = run_git_text(repo, "for-each-ref", "--format=%(refname:short)", "refs/heads/")
     branches: list[BranchInfo] = []
     for name in (n.strip() for n in names.splitlines()):
         if not name:
@@ -170,8 +168,9 @@ def list_branches(repo: Path) -> list[BranchInfo]:
             # finding needs to report.
             comparison = upstream if not upstream_gone else _merge_ref(repo, name)
             if comparison and _ref_exists(repo, comparison):
-                counts = run_git(repo, "rev-list", "--left-right", "--count",
-                                 f"{name}...{comparison}")
+                counts = run_git(
+                    repo, "rev-list", "--left-right", "--count", f"{name}...{comparison}"
+                )
                 if counts.returncode == 0:
                     # Output is tab-separated: <ahead>\t<behind>.
                     fields = counts.stdout.split()

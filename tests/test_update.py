@@ -4,10 +4,10 @@ This is the only code in the project permitted to change a repository, so its
 refusals are asserted as carefully as its effect: each test below checks that
 HEAD did not move, not merely that nothing was printed.
 """
+
 from typer.testing import CliRunner
 
 from git_ferret.cli import build_parser, fast_forward_worktrees
-
 from tests.helpers import clone_local, commit, make_repo, run
 
 
@@ -122,8 +122,7 @@ def test_rollup_names_repositories_relative_to_the_root(tmp_path):
 
 
 def test_rollup_is_a_block_of_its_own(tmp_path):
-    res = CliRunner().invoke(build_parser(),
-                             ["local", str(_updatable_tree(tmp_path)), "--update"])
+    res = CliRunner().invoke(build_parser(), ["local", str(_updatable_tree(tmp_path)), "--update"])
 
     lines = res.output.split("\n")
     heading = lines.index("## fast-forwarded")
@@ -144,8 +143,7 @@ def test_rollup_is_absent_when_nothing_was_updated(tmp_path):
 
 
 def test_rollup_lines_carry_no_status_marker(tmp_path):
-    res = CliRunner().invoke(build_parser(),
-                             ["local", str(_updatable_tree(tmp_path)), "--update"])
+    res = CliRunner().invoke(build_parser(), ["local", str(_updatable_tree(tmp_path)), "--update"])
 
     rollup = res.output.split("## fast-forwarded")[1]
     assert "[OK]" not in rollup

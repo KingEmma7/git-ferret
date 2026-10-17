@@ -25,6 +25,7 @@ from git_ferret.gitcmd import run_git, run_git_text
 from git_ferret.gitops import tree_hash
 from git_ferret.models import CONFLICT_EXIT, MERGED_EXIT
 
+
 class MergeVerdict(StrEnum):
     """The outcome of applying *branch* to *base_ref*."""
 
@@ -53,11 +54,7 @@ def merge_verdict(repo: Path, base_ref: str, branch_ref: str) -> MergeVerdict:
         base_tree = tree_hash(repo, base_ref)
         if base_tree is None:
             return MergeVerdict.UNKNOWN
-        return (
-            MergeVerdict.MERGED
-            if result_tree == base_tree
-            else MergeVerdict.NOT_MERGED
-        )
+        return MergeVerdict.MERGED if result_tree == base_tree else MergeVerdict.NOT_MERGED
     if proc.returncode == CONFLICT_EXIT:
         # A genuine conflict prints the merged tree and then the conflicted
         # paths. A ref that cannot be resolved, the usual case in a shallow
@@ -79,8 +76,7 @@ def remote_branches(repo: Path) -> list[str]:
     The ``HEAD`` symref is dropped: it points at the default branch rather than
     being a branch of its own.
     """
-    output = run_git_text(repo, "for-each-ref", "--format=%(refname)",
-                          "refs/remotes/")
+    output = run_git_text(repo, "for-each-ref", "--format=%(refname)", "refs/remotes/")
     refs = []
     for line in output.splitlines():
         ref = line.strip()
@@ -97,8 +93,7 @@ def commits_in_range(repo: Path, base_ref: str, branch_ref: str) -> list[str]:
     branch in the repository, because the user's own commits live in the base
     branch's history and are therefore reachable from all of them.
     """
-    output = run_git_text(repo, "log", "--format=%an <%ae>",
-                          f"{base_ref}..{branch_ref}")
+    output = run_git_text(repo, "log", "--format=%an <%ae>", f"{base_ref}..{branch_ref}")
     return [line.strip() for line in output.splitlines() if line.strip()]
 
 

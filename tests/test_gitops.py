@@ -1,4 +1,5 @@
 """Tests for fetch, base ref resolution, and local branch listing."""
+
 from git_ferret.gitops import (
     base_ref_is_remote,
     fetch_all,
@@ -7,7 +8,6 @@ from git_ferret.gitops import (
     resolve_base_ref,
     tree_hash,
 )
-
 from tests.helpers import clone_local, commit, make_repo, run
 
 

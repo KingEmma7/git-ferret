@@ -8,10 +8,10 @@ carry different local identities.
 from __future__ import annotations
 
 import tomllib
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from fnmatch import fnmatchcase
 from pathlib import Path
-from typing import Iterable
 
 from git_ferret.gitcmd import run_git
 
@@ -71,9 +71,7 @@ class Config:
             return cls()
         data = tomllib.loads(config_path.read_text())
         raw_author = data.get("author", [])
-        author = split_identities(
-            [raw_author] if isinstance(raw_author, str) else list(raw_author)
-        )
+        author = split_identities([raw_author] if isinstance(raw_author, str) else list(raw_author))
         whitelist = list(data.get("whitelist", {}).get("patterns", []))
         return cls(author=author, whitelist=whitelist)
 
@@ -86,9 +84,7 @@ class Config:
         return any(fnmatchcase(branch, pattern) for pattern in self.whitelist)
 
 
-def resolve_identities(
-    cli_author: list[str], config: Config, repo: Path
-) -> list[str]:
+def resolve_identities(cli_author: list[str], config: Config, repo: Path) -> list[str]:
     """Resolve author identities, most specific source first.
 
     Returns ``[]`` when nothing resolves. An empty result must never be passed
@@ -109,9 +105,7 @@ def resolve_identities(
     return []
 
 
-def identity_matches(
-    commits_author_strings: Iterable[str], identities: list[str]
-) -> bool:
+def identity_matches(commits_author_strings: Iterable[str], identities: list[str]) -> bool:
     """Whether any commit was authored by any of *identities*.
 
     Substring, not equality: the user configures a fragment such as an email
@@ -125,8 +119,4 @@ def identity_matches(
     if not usable:
         return False
     authors = list(commits_author_strings)
-    return any(
-        identity in author
-        for identity in usable
-        for author in authors
-    )
+    return any(identity in author for identity in usable for author in authors)

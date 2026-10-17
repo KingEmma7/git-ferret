@@ -141,8 +141,7 @@ def render_header(stale_count: int, total: int) -> str:
     return _block(lines)
 
 
-def render_report(reports: list[RepoReport], stale_count: int,
-                  root: Path | None = None) -> str:
+def render_report(reports: list[RepoReport], stale_count: int, root: Path | None = None) -> str:
     """The whole report as markdown text, for callers holding every result.
 
     Same lines as streaming them one at a time, so the two cannot drift; only

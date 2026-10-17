@@ -9,16 +9,14 @@ Both come from the final review:
 - An unrecognised command or flag exited 2; the documented contract is 1 for a
   usage error.
 """
+
 import os
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-import pytest
-
 from git_ferret.gitops import fetch_head_mtime, refs_updated_at
-
 from tests.helpers import clone_local, commit, make_repo, run
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -27,11 +25,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 def _cli(*args):
     return subprocess.run(
         [sys.executable, "-m", "git_ferret.cli", *args],
-        capture_output=True, text=True, cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
     )
 
 
 # --- fetch age ----------------------------------------------------------------
+
 
 def test_fresh_clone_has_a_known_refs_timestamp(tmp_path):
     # `git clone` writes no FETCH_HEAD, so the clone must fall back to the
@@ -159,6 +161,7 @@ def test_stale_warning_fires_when_a_later_repository_is_stale(tmp_path):
 
 
 # --- exit codes ---------------------------------------------------------------
+
 
 def test_unknown_command_exits_one():
     result = _cli("bogus-command")

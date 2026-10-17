@@ -27,6 +27,8 @@ def clone_local(tmp_path: Path):
     """``clone_local(src)`` clones under ``tmp_path``; ``clone_local(src, dest)`` is honoured."""
 
     def _clone(src: Path, dest: Path | None = None, depth: int | None = None) -> Path:
-        return clone_local_helper(src, dest if dest is not None else tmp_path / "clone", depth=depth)
+        return clone_local_helper(
+            src, dest if dest is not None else tmp_path / "clone", depth=depth
+        )
 
     return _clone

@@ -10,21 +10,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from git_wombat.analysis.local import NO_BASE_REASON, branch_status_is_clean
-from git_wombat.analysis.merged import (
+from git_ferret.analysis.local import NO_BASE_REASON, branch_status_is_clean
+from git_ferret.analysis.merged import (
     MergeVerdict,
     branch_name_from_ref,
     commits_in_range,
     merge_verdict,
     remote_branches,
 )
-from git_wombat.config import Config, identity_matches
-from git_wombat.gitops import (
+from git_ferret.config import Config, identity_matches
+from git_ferret.gitops import (
     base_ref_is_remote,
     refs_updated_at,
     list_branches,
 )
-from git_wombat.models import Finding, RepoReport, Status
+from git_ferret.models import Finding, RepoReport, Status
 
 _STATUS_FOR_VERDICT = {
     # `merged` only ever iterates remote refs, so every branch it lists is

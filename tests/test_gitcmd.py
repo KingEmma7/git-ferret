@@ -1,7 +1,7 @@
 """Tests for the git subprocess seam."""
 import pytest
 
-from git_wombat.gitcmd import GitError, run_git, run_git_text
+from git_ferret.gitcmd import GitError, run_git, run_git_text
 
 from tests.helpers import commit, make_repo
 

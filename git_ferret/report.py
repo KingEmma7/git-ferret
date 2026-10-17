@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import TextIO
 
-from git_wombat.models import Finding, RepoReport
+from git_ferret.models import Finding, RepoReport
 
 TIMESTAMP_FORMAT = "%Y-%m-%d %H:%M:%S"
 WARNING_EMOJI = "⚠️"
@@ -131,7 +131,7 @@ def render_header(stale_count: int, total: int) -> str:
     streaming caller, which holds one repository at a time, can still say how
     many the warning is about.
     """
-    lines = ["# git-wombat"]
+    lines = ["# git-ferret"]
     if stale_count:
         lines += [
             "",

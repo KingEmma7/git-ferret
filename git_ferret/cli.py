@@ -16,18 +16,18 @@ from pathlib import Path
 
 import typer
 
-from git_wombat.analysis.health import report_remote_health
-from git_wombat.analysis.local import analyse_local
-from git_wombat.analysis.remote import (
+from git_ferret.analysis.health import report_remote_health
+from git_ferret.analysis.local import analyse_local
+from git_ferret.analysis.remote import (
     analyse_merged_candidates,
     analyse_remote,
 )
-from git_wombat.config import Config, resolve_identities
-from git_wombat.discovery import discover_repos, list_worktrees
-from git_wombat.gitcmd import GitError, run_git
-from git_wombat.gitops import fetch_all, refs_updated_at, resolve_base_ref
-from git_wombat.models import RepoReport
-from git_wombat.report import display_path, emit, render_header, render_repo
+from git_ferret.config import Config, resolve_identities
+from git_ferret.discovery import discover_repos, list_worktrees
+from git_ferret.gitcmd import GitError, run_git
+from git_ferret.gitops import fetch_all, refs_updated_at, resolve_base_ref
+from git_ferret.models import RepoReport
+from git_ferret.report import display_path, emit, render_header, render_repo
 
 app = typer.Typer(help="Audit many local git repositories at once. Reports only.")
 

@@ -7,11 +7,11 @@ The update block itself reports only what it wrote. These reasons belong to the
 repository's own section, where they are findings among the rest, so that is
 where they are asserted.
 """
-from git_wombat.analysis.local import analyse_local
-from git_wombat.cli import fast_forward_worktrees
-from git_wombat.config import Config
-from git_wombat.gitops import resolve_base_ref
-from git_wombat.models import Status
+from git_ferret.analysis.local import analyse_local
+from git_ferret.cli import fast_forward_worktrees
+from git_ferret.config import Config
+from git_ferret.gitops import resolve_base_ref
+from git_ferret.models import Status
 
 from tests.helpers import clone_local, commit, make_repo, run
 

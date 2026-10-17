@@ -1,8 +1,8 @@
-"""The one seam between git-wombat and the git binary.
+"""The one seam between git-ferret and the git binary.
 
 Every git invocation in the project goes through this module, and no other
 module imports ``subprocess``. Concentrating the calls in a single file is what
-makes the report-only safety property auditable: the whole of what git-wombat
+makes the report-only safety property auditable: the whole of what git-ferret
 can do to a repository is the argv assembled by :func:`run_git`.
 """
 

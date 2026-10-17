@@ -1,4 +1,4 @@
-# git-wombat — design
+# git-ferret — design
 
 A read-only reporting tool for auditing many local git repositories at once.
 
@@ -9,7 +9,7 @@ pushed long ago and forgotten, upstream branches deleted server-side, work aband
 four months back. Nothing surfaces this. Auditing repo-by-repo is too slow to do regularly, so the
 state rots.
 
-git-wombat answers "what's lying around, and what is safe to remove?" in one run, and never removes
+git-ferret answers "what's lying around, and what is safe to remove?" in one run, and never removes
 anything itself. The user deletes; the tool only reports and justifies.
 
 ## Goals
@@ -53,9 +53,9 @@ Three subcommands. Each walks the tree, analyses, and prints independently, so a
 alone without remembering to run another first.
 
 ```
-git-wombat local  [PATH]      # branches checked out locally, worktrees, dirty state, stashes
-git-wombat remote [PATH]      # remote branches, filtered by author and branch name
-git-wombat merged [PATH]      # remote branches whose changes are already in origin/<base>
+git-ferret local  [PATH]      # branches checked out locally, worktrees, dirty state, stashes
+git-ferret remote [PATH]      # remote branches, filtered by author and branch name
+git-ferret merged [PATH]      # remote branches whose changes are already in origin/<base>
 ```
 
 `remote` is named for what it does — enumerate remote branches — not for who wrote them. It is not a
@@ -103,7 +103,7 @@ refresh.
 Resolved in this order, first match wins:
 
 1. `--author` value on the command line (repeatable, or comma-separated)
-2. `author` in `~/.git-wombat.toml`
+2. `author` in `~/.git-ferret.toml`
 3. `git config user.name` and `git config user.email`
 
 Sources 1 and 2 may supply multiple identities (repeatable flag, comma-separated, or a list in
@@ -444,7 +444,7 @@ differently on purpose.
 Shape:
 
 ```markdown
-# git-wombat
+# git-ferret
 
 > ⚠️  2 of 4 repositories analysed from stale local state (no fetch this run)
 
@@ -541,7 +541,7 @@ to alert on *new* findings via output diffing rather than on exit status.
 
 ## Configuration
 
-Single file, `~/.git-wombat.toml`. Read-only (`tomllib` cannot write); the user edits it.
+Single file, `~/.git-ferret.toml`. Read-only (`tomllib` cannot write); the user edits it.
 
 ```toml
 # One identity, or several — they combine with OR ("all of my addresses").
@@ -592,10 +592,10 @@ credential helper rather than reimplementing and drifting from them.
 ## Python layout
 
 ```
-git_wombat/
+git_ferret/
   __init__.py
   cli.py           # typer app, subcommand definitions
-  config.py        # ~/.git-wombat.toml loading, identity resolution
+  config.py        # ~/.git-ferret.toml loading, identity resolution
   discovery.py     # recursive repo/worktree detection
   git.py           # subprocess wrappers for all git calls
   report.py        # findings model, markdown assembly

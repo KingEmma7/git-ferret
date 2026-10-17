@@ -1,4 +1,4 @@
-# git-wombat
+# git-ferret
 
 Audit many local git repositories at once, and find the branches you can delete.
 
@@ -6,11 +6,11 @@ Keep twenty or thirty repositories in one directory and the state rots quietly: 
 long ago and forgotten, upstream branches deleted server-side, work abandoned on a branch from four
 months back. Nothing surfaces it. Auditing repo by repo is too slow to do regularly.
 
-git-wombat answers *what is lying around, and what is safe to remove?*, and never removes anything
+git-ferret answers *what is lying around, and what is safe to remove?*, and never removes anything
 itself. You delete; it reports and explains.
 
 ```console
-$ git-wombat merged ~/src
+$ git-ferret merged ~/src
 ```
 
 ## It will not delete anything
@@ -18,7 +18,7 @@ $ git-wombat merged ~/src
 The only write this tool performs is a fast-forward, and only when you explicitly ask:
 
 ```console
-$ git-wombat local ~/src --update
+$ git-ferret local ~/src --update
 ```
 
 Without that flag, every command is read-only. There is no code path that deletes, stashes,
@@ -51,11 +51,11 @@ Needs Python 3.11 or newer, and `git` on your `PATH`.
 ### From a checkout
 
 ```console
-$ cd path/to/git-wombat
+$ cd path/to/git-ferret
 $ python3 -m venv .venv
 $ source .venv/bin/activate
 $ pip install -e .
-$ git-wombat --help
+$ git-ferret --help
 ```
 
 On Windows the activation is `.venv\Scripts\activate`.
@@ -79,10 +79,10 @@ to be rebuilt afterwards. The uv route below avoids needing it at all.
 Python:
 
 ```console
-$ cd path/to/git-wombat
+$ cd path/to/git-ferret
 $ uv venv
 $ uv pip install -e .
-$ .venv/bin/git-wombat --help
+$ .venv/bin/git-ferret --help
 ```
 
 ### Without a virtual environment
@@ -92,7 +92,7 @@ $ pip install --user -e .
 ```
 
 Or with pipx, which keeps the tool and its dependencies in their own environment
-and puts `git-wombat` on your `PATH` directly:
+and puts `git-ferret` on your `PATH` directly:
 
 ```console
 $ pipx install -e .
@@ -104,16 +104,16 @@ Useful while working on the code, or if you would rather not put it on your
 `PATH`:
 
 ```console
-$ .venv/bin/git-wombat local ~/src          # explicit path
+$ .venv/bin/git-ferret local ~/src          # explicit path
 $ source .venv/bin/activate
-$ git-wombat local ~/src                    # once activated
+$ git-ferret local ~/src                    # once activated
 ```
 
 With [uv](https://docs.astral.sh/uv/) you need no environment of your own:
 
 ```console
-$ uv run git-wombat local ~/src                    # editable install in .venv
-$ uvx --with-editable . git-wombat local ~/src     # isolated, leaves no .venv
+$ uv run git-ferret local ~/src                    # editable install in .venv
+$ uvx --with-editable . git-ferret local ~/src     # isolated, leaves no .venv
 ```
 
 Both run the code in your checkout, so an edit takes effect on the next command. The second form keeps
@@ -124,7 +124,7 @@ builds a snapshot of the directory and caches that, so later edits are not picke
 ### Check your install
 
 ```console
-$ git-wombat local ~/src --no-fetch | head
+$ git-ferret local ~/src --no-fetch | head
 ```
 
 A run over a directory of real repositories should print a report and exit 0.
@@ -132,12 +132,12 @@ A run over a directory of real repositories should print a report and exit 0.
 ### When the venv breaks
 
 ```console
-$ .venv/bin/git-wombat local ~/src
-zsh: bad interpreter: /home/you/src/git-wombat/.venv/bin/python3.11: no such file or directory
+$ .venv/bin/git-ferret local ~/src
+zsh: bad interpreter: /home/you/src/git-ferret/.venv/bin/python3.11: no such file or directory
 ```
 
 The environment is intact; its Python is gone. Every script installed into `.venv/bin`
-(`git-wombat`, `pytest`, `pip`) starts with the absolute path of the interpreter that created the
+(`git-ferret`, `pytest`, `pip`) starts with the absolute path of the interpreter that created the
 environment. Once
 that interpreter is uninstalled, upgraded or switched (`pyenv` or `uv` changing versions, a Homebrew
 upgrade, the Python macOS ships changing), all of them fail the same way, and activating the
@@ -165,11 +165,11 @@ If the version named in the error is one you no longer want (`python3.11` when y
 Branches checked out locally, plus worktree state: uncommitted changes, detached HEADs, stashes.
 
 ```console
-$ git-wombat local ~/src
+$ git-ferret local ~/src
 ```
 
 ```markdown
-# git-wombat
+# git-ferret
 
 ## api-server
 fetched 2026-10-16 09:41:02 · base: origin/main
@@ -191,8 +191,8 @@ Remote branches, filtered by author or by name. Useful well beyond "my branches"
 ticket number and you get every branch for that ticket, whoever wrote it.
 
 ```console
-$ git-wombat remote ~/src --author you@example.com
-$ git-wombat remote ~/src --branch ABC-123
+$ git-ferret remote ~/src --author you@example.com
+$ git-ferret remote ~/src --branch ABC-123
 ```
 
 ### `merged`: which remote branches are already in main?
@@ -201,11 +201,11 @@ Remote branches whose changes are fully present in the base branch, marked as de
 not.
 
 ```console
-$ git-wombat merged ~/src
+$ git-ferret merged ~/src
 ```
 
 ```markdown
-# git-wombat
+# git-ferret
 
 ## web-app
 fetched 2026-10-16 09:41:05 · base: origin/main
@@ -228,7 +228,7 @@ branch is an *ancestor* of main. That is wrong in a way that matters here:
 - A branch merged and later **reverted** stays an ancestor, so it reads as "merged" when its changes
   are gone.
 
-git-wombat instead asks the behavioural question: *would applying this branch change anything?*
+git-ferret instead asks the behavioural question: *would applying this branch change anything?*
 by performing a real three-way merge in memory and comparing the result to the base tree:
 
 ```console
@@ -284,14 +284,14 @@ current. A failed fetch is never fatal: the repository is still analysed and the
 Once you have a fresh set of refs, repeat runs are cheap and touch no network:
 
 ```console
-$ git-wombat merged ~/src --no-fetch
+$ git-ferret merged ~/src --no-fetch
 ```
 
 A fetch failure never stops the run, and the staleness warning tells you what you are looking at.
 
 ## Configuration
 
-`~/.git-wombat.toml`, optional:
+`~/.git-ferret.toml`, optional:
 
 ```toml
 # One identity, or several. They combine with OR: "all of my addresses".
@@ -321,7 +321,7 @@ Identity resolves in this order, first match wins:
 Output is markdown. It prints nicely in a terminal and stays valid markdown when redirected:
 
 ```console
-$ git-wombat local ~/src > report.md
+$ git-ferret local ~/src > report.md
 ```
 
 No ANSI escapes and no tables ever reach the file. Emoji are decorative only: the bracketed
@@ -361,7 +361,7 @@ diffing two reports rather than on exit status.
 A repository that cannot be read is reported and skipped, not fatal.
 
 ```console
-$ git-wombat local ~/src --no-fetch > ~/reports/$(date +%F).md
+$ git-ferret local ~/src --no-fetch > ~/reports/$(date +%F).md
 $ diff ~/reports/yesterday.md ~/reports/today.md
 ```
 

@@ -1,7 +1,7 @@
 """End-to-end coverage: all three subcommands over a realistic repository tree."""
 from typer.testing import CliRunner
 
-from git_wombat.cli import build_parser
+from git_ferret.cli import build_parser
 
 from tests.helpers import clone_local, commit, make_repo, run
 
@@ -43,7 +43,7 @@ def test_local_end_to_end_emits_valid_markdown(tmp_path):
     root = _tree(tmp_path)
     res = runner.invoke(build_parser(), ["local", str(root), "--no-fetch"])
     assert res.exit_code == 0, res.output
-    assert res.stdout.startswith("# git-wombat")
+    assert res.stdout.startswith("# git-ferret")
     assert "\x1b[" not in res.stdout
 
 

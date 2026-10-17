@@ -9,8 +9,8 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from git_wombat.gitcmd import run_git, run_git_text
-from git_wombat.models import BranchInfo
+from git_ferret.gitcmd import run_git, run_git_text
+from git_ferret.models import BranchInfo
 
 # Tried in order. The remote-tracking ref wins because `merged` recommends
 # deleting *remote* branches, and the only question that matters is whether the

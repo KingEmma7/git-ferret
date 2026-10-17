@@ -1,7 +1,7 @@
 """Tests for the CLI surface."""
 from typer.testing import CliRunner
 
-from git_wombat.cli import build_parser
+from git_ferret.cli import build_parser
 
 runner = CliRunner()
 

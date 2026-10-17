@@ -1,12 +1,12 @@
 """Tests for remote branch filtering and safe-to-delete gating."""
-from git_wombat.analysis.remote import (
+from git_ferret.analysis.remote import (
     analyse_merged_candidates,
     analyse_remote,
     local_branch_unpushed_map,
 )
-from git_wombat.config import Config
-from git_wombat.gitops import resolve_base_ref
-from git_wombat.models import Status
+from git_ferret.config import Config
+from git_ferret.gitops import resolve_base_ref
+from git_ferret.models import Status
 
 from tests.helpers import clone_local, commit, make_repo, run
 

@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from git_wombat.gitcmd import run_git
-from git_wombat.models import Finding, RepoReport, Status
+from git_ferret.gitcmd import run_git
+from git_ferret.models import Finding, RepoReport, Status
 
 
 def report_remote_health(repo: Path, report: RepoReport) -> None:

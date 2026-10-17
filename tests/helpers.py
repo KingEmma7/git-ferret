@@ -4,7 +4,7 @@ Test modules import these directly (``from tests.helpers import commit,
 make_repo, run``); ``tests/conftest.py`` re-exports ``make_repo`` and
 ``clone_local`` as pytest fixtures.
 
-Fixture setup goes through the same ``git_wombat.gitcmd`` seam as the code
+Fixture setup goes through the same ``git_ferret.gitcmd`` seam as the code
 under test. Nothing here touches ``subprocess``: ``gitcmd.py`` is the only
 module allowed to shell out.
 """
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from git_wombat.gitcmd import CompletedProcess, run_git
+from git_ferret.gitcmd import CompletedProcess, run_git
 
 DEV_NAME = "Dev"
 DEV_EMAIL = "dev@example.com"

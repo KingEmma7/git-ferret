@@ -9,10 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from git_wombat.analysis.merged import merge_verdict
-from git_wombat.cli import run_command
-from git_wombat.gitops import resolve_base_ref
-from git_wombat.models import RepoReport
+from git_ferret.analysis.merged import merge_verdict
+from git_ferret.cli import run_command
+from git_ferret.gitops import resolve_base_ref
+from git_ferret.models import RepoReport
 
 from tests.helpers import commit, make_repo, run
 
@@ -110,7 +110,7 @@ def test_missing_path_is_a_usage_error(tmp_path):
     # The exit code is asserted end to end in test_freshness_and_exit.py
     # against the real entry point; this only pins that the command refuses
     # rather than degrading to an empty, exit-0 report.
-    from git_wombat.cli import UsageError, _resolve_root
+    from git_ferret.cli import UsageError, _resolve_root
 
     with pytest.raises(UsageError):
         _resolve_root(tmp_path / "nope")

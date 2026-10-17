@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from git_wombat.config import Config, is_always_excluded
-from git_wombat.discovery import list_worktrees
-from git_wombat.gitcmd import run_git
-from git_wombat.gitops import (
+from git_ferret.config import Config, is_always_excluded
+from git_ferret.discovery import list_worktrees
+from git_ferret.gitcmd import run_git
+from git_ferret.gitops import (
     list_branches,
     refs_updated_at,
     stash_entries,
 )
-from git_wombat.models import BranchInfo, Finding, RepoReport, Status, WorktreeInfo
+from git_ferret.models import BranchInfo, Finding, RepoReport, Status, WorktreeInfo
 
 NO_BASE_REASON = "no base branch (neither origin/main, origin/master, main nor master)"
 

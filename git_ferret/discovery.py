@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from git_wombat.gitcmd import run_git_text
+from git_ferret.gitcmd import run_git_text
 
 
 def is_git_dir(path: Path) -> bool:

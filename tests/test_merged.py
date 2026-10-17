@@ -3,7 +3,7 @@
 These are the load-bearing tests of the whole tool: they decide whether a
 branch is recommended for deletion.
 """
-from git_wombat.analysis.merged import (
+from git_ferret.analysis.merged import (
     MergeVerdict,
     commits_in_range,
     merge_verdict,

@@ -1,5 +1,5 @@
 """Tests for fetch, base ref resolution, and local branch listing."""
-from git_wombat.gitops import (
+from git_ferret.gitops import (
     base_ref_is_remote,
     fetch_all,
     fetch_head_mtime,
@@ -179,7 +179,7 @@ def test_list_branches_carries_last_commit_age(tmp_path):
 
 
 def test_stash_entries_empty_for_clean_repo(tmp_path):
-    from git_wombat.gitops import stash_entries
+    from git_ferret.gitops import stash_entries
 
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\n")

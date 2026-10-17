@@ -21,9 +21,9 @@ from __future__ import annotations
 from enum import StrEnum
 from pathlib import Path
 
-from git_wombat.gitcmd import run_git, run_git_text
-from git_wombat.gitops import tree_hash
-from git_wombat.models import CONFLICT_EXIT, MERGED_EXIT
+from git_ferret.gitcmd import run_git, run_git_text
+from git_ferret.gitops import tree_hash
+from git_ferret.models import CONFLICT_EXIT, MERGED_EXIT
 
 class MergeVerdict(StrEnum):
     """The outcome of applying *branch* to *base_ref*."""

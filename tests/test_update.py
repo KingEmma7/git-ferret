@@ -6,7 +6,7 @@ HEAD did not move, not merely that nothing was printed.
 """
 from typer.testing import CliRunner
 
-from git_wombat.cli import build_parser, fast_forward_worktrees
+from git_ferret.cli import build_parser, fast_forward_worktrees
 
 from tests.helpers import clone_local, commit, make_repo, run
 

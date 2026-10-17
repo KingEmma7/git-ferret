@@ -5,13 +5,13 @@ the plan assigned but never wired, or a correctness bug reachable in ordinary us
 """
 from pathlib import Path
 
-from git_wombat.analysis.health import report_remote_health
-from git_wombat.analysis.local import analyse_local, worktree_status
-from git_wombat.analysis.remote import analyse_merged_candidates, analyse_remote
-from git_wombat.analysis.merged import merge_verdict
-from git_wombat.config import Config, identity_matches, resolve_identities
-from git_wombat.gitops import resolve_base_ref
-from git_wombat.models import RepoReport, Status
+from git_ferret.analysis.health import report_remote_health
+from git_ferret.analysis.local import analyse_local, worktree_status
+from git_ferret.analysis.remote import analyse_merged_candidates, analyse_remote
+from git_ferret.analysis.merged import merge_verdict
+from git_ferret.config import Config, identity_matches, resolve_identities
+from git_ferret.gitops import resolve_base_ref
+from git_ferret.models import RepoReport, Status
 
 from tests.helpers import clone_local, commit, make_repo, run
 
@@ -89,7 +89,7 @@ def test_remote_and_merged_report_a_repo_without_a_remote(tmp_path, capsys):
     # `local` reported a missing remote but `remote` and `merged` stayed silent:
     # a repository with no remote produced a heading and nothing else, which
     # reads as "nothing to clean" rather than "could not look".
-    from git_wombat.cli import run_command
+    from git_ferret.cli import run_command
 
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\n")
@@ -195,7 +195,7 @@ def test_blank_entries_are_dropped_but_real_ones_kept(tmp_path):
 # --- I8: the gate must not re-list branches per candidate ----------------------
 
 def test_merged_does_not_rescan_branches_per_candidate(tmp_path, monkeypatch):
-    import git_wombat.analysis.remote as remote_mod
+    import git_ferret.analysis.remote as remote_mod
 
     src = make_repo(tmp_path / "src")
     (src / "f.txt").write_text("a\nb\n")

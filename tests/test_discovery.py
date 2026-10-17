@@ -1,5 +1,5 @@
 """Tests for repository and worktree discovery."""
-from git_wombat.discovery import (
+from git_ferret.discovery import (
     discover_repos,
     is_git_dir,
     is_submodule,

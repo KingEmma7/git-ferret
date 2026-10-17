@@ -2,7 +2,7 @@
 from datetime import datetime
 from pathlib import Path
 
-from git_wombat.models import Finding, RepoReport, Status
+from git_ferret.models import Finding, RepoReport, Status
 
 
 def test_finding_defaults():

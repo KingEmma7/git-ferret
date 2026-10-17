@@ -1,8 +1,8 @@
 """Tests for local branch and worktree analysis."""
-from git_wombat.analysis.local import analyse_local
-from git_wombat.config import Config
-from git_wombat.gitops import resolve_base_ref
-from git_wombat.models import Status
+from git_ferret.analysis.local import analyse_local
+from git_ferret.config import Config
+from git_ferret.gitops import resolve_base_ref
+from git_ferret.models import Status
 
 from tests.helpers import commit, make_repo, run
 

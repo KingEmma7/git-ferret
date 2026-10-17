@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from git_wombat.gitops import fetch_head_mtime, refs_updated_at
+from git_ferret.gitops import fetch_head_mtime, refs_updated_at
 
 from tests.helpers import clone_local, commit, make_repo, run
 
@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 def _cli(*args):
     return subprocess.run(
-        [sys.executable, "-m", "git_wombat.cli", *args],
+        [sys.executable, "-m", "git_ferret.cli", *args],
         capture_output=True, text=True, cwd=REPO_ROOT,
     )
 
@@ -70,7 +70,7 @@ def test_fetched_repo_uses_fetch_head(tmp_path):
 
 
 def test_fresh_clone_reports_when_its_refs_were_written(tmp_path, capsys):
-    from git_wombat.cli import run_command
+    from git_ferret.cli import run_command
 
     src = make_repo(tmp_path / "src")
     (src / "f.txt").write_text("a\n")
@@ -88,7 +88,7 @@ def test_fresh_clone_reports_when_its_refs_were_written(tmp_path, capsys):
 
 
 def test_genuinely_stale_state_is_still_flagged(tmp_path, capsys):
-    from git_wombat.cli import run_command
+    from git_ferret.cli import run_command
 
     src = make_repo(tmp_path / "src")
     (src / "f.txt").write_text("a\n")

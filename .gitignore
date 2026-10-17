@@ -53,9 +53,9 @@ pip-wheel-metadata/
 .env.*
 !.env.example
 
-# git-wombat local config. The shipped default documents the schema; this is
+# git-ferret local config. The shipped default documents the schema; this is
 # the personal file and stays untracked.
-.git-wombat.toml
+.git-ferret.toml
 
 # Editors and IDEs
 .idea/
@@ -68,6 +68,6 @@ pip-wheel-metadata/
 # Isolated workspaces
 .worktrees/
 
-# NOTE: .git/ is deliberately NOT ignored. git-wombat analyses git
+# NOTE: .git/ is deliberately NOT ignored. git-ferret analyses git
 # repositories, so treating it as ordinary build output would be wrong, and the
 # directory is already tracked implicitly as the repository itself.

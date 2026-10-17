@@ -4,8 +4,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from git_wombat.models import Finding, RepoReport, Status
-from git_wombat.report import emit, render_header, render_report, render_repo
+from git_ferret.models import Finding, RepoReport, Status
+from git_ferret.report import emit, render_header, render_report, render_repo
 
 
 def _repo(**kwargs):
@@ -131,7 +131,7 @@ def test_every_repo_gets_a_heading_even_when_clean():
 
 def test_starts_with_top_level_heading():
     out = render_report([_repo()], stale_count=0)
-    assert out.startswith("# git-wombat")
+    assert out.startswith("# git-ferret")
 
 
 def test_safe_to_delete_reason_is_shown():
@@ -148,7 +148,7 @@ def test_safe_to_delete_reason_is_shown():
 
 def test_empty_report_list_still_renders_header():
     out = render_report([], stale_count=0)
-    assert out.startswith("# git-wombat")
+    assert out.startswith("# git-ferret")
 
 
 def test_fetch_failure_is_flagged():
@@ -305,5 +305,5 @@ def test_screen_keeps_the_document_title_apart_from_the_stale_warning():
     # Only a repository title hugs the line beneath it; the document title is
     # not a header for the warning and keeps its blank line.
     lines = _on_screen(render_header(stale_count=1, total=3))
-    assert lines[0].strip() == "git-wombat"
+    assert lines[0].strip() == "git-ferret"
     assert lines[1] == ""

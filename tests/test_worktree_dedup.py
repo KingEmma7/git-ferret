@@ -4,7 +4,7 @@ A worktree whose directory sits beside its main repository (a common hotfix
 layout) has a `.git` file, so naive discovery reports the same repository twice
 and fetches it twice.
 """
-from git_wombat.discovery import discover_repos
+from git_ferret.discovery import discover_repos
 
 from tests.helpers import commit, make_repo, run
 
@@ -24,7 +24,7 @@ def test_linked_worktree_is_not_reported_as_a_second_repo(tmp_path):
 
 
 def test_linked_worktree_is_still_reachable_as_a_worktree(tmp_path):
-    from git_wombat.discovery import list_worktrees
+    from git_ferret.discovery import list_worktrees
 
     repo, hotfix = _repo_with_sibling_worktree(tmp_path)
     paths = [p.name for p, _ in list_worktrees(repo)]

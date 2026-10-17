@@ -1,6 +1,6 @@
 """User configuration: identity resolution and the branch whitelist.
 
-Identity precedence is ``--author`` > ``~/.git-wombat.toml`` > git config, and
+Identity precedence is ``--author`` > ``~/.git-ferret.toml`` > git config, and
 it resolves *per repository* because a collection of repos may legitimately
 carry different local identities.
 """
@@ -13,9 +13,9 @@ from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Iterable
 
-from git_wombat.gitcmd import run_git
+from git_ferret.gitcmd import run_git
 
-DEFAULT_CONFIG_PATH = Path.home() / ".git-wombat.toml"
+DEFAULT_CONFIG_PATH = Path.home() / ".git-ferret.toml"
 
 # Always excluded from branch reports, whatever the configuration says.
 ALWAYS_EXCLUDED = ("main", "master")

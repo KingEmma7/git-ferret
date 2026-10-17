@@ -1,5 +1,5 @@
 """Tests for config loading, identity resolution, and whitelist globbing."""
-from git_wombat.config import (
+from git_ferret.config import (
     Config,
     identity_matches,
     is_always_excluded,

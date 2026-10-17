@@ -1,4 +1,4 @@
-# git-wombat Implementation Plan
+# git-ferret Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.11+, `typer`, `rich`, `tomllib` (stdlib), `pytest`, `subprocess`.
 
-**Spec:** `docs/superpowers/specs/2026-10-16-git-wombat-design.md`
+**Spec:** `docs/superpowers/specs/2026-10-16-git-ferret-design.md`
 
 ## Global Constraints
 
@@ -58,16 +58,16 @@ Failure modes the spec implies that are easy to miss. Each has a test pinned to 
 
 ```
 pyproject.toml              packaging, deps, console entry point
-git_wombat/__init__.py      version
-git_wombat/gitcmd.py        all git subprocess calls; the only module that shells out
-git_wombat/config.py        ~/.git-wombat.toml loading, identity resolution, whitelist globbing
-git_wombat/discovery.py     recursive repo + worktree detection
-git_wombat/models.py        Finding/RepoReport dataclasses shared by analysis and report
-git_wombat/analysis/local.py     local branches, worktrees, dirt, stashes
-git_wombat/analysis/remote.py    remote branch enumeration with author/branch filters
-git_wombat/analysis/merged.py    merge-tree based merged/conflicts/unknown verdicts
-git_wombat/report.py        markdown assembly, TTY vs pipe
-git_wombat/cli.py           typer app, three subcommands
+git_ferret/__init__.py      version
+git_ferret/gitcmd.py        all git subprocess calls; the only module that shells out
+git_ferret/config.py        ~/.git-ferret.toml loading, identity resolution, whitelist globbing
+git_ferret/discovery.py     recursive repo + worktree detection
+git_ferret/models.py        Finding/RepoReport dataclasses shared by analysis and report
+git_ferret/analysis/local.py     local branches, worktrees, dirt, stashes
+git_ferret/analysis/remote.py    remote branch enumeration with author/branch filters
+git_ferret/analysis/merged.py    merge-tree based merged/conflicts/unknown verdicts
+git_ferret/report.py        markdown assembly, TTY vs pipe
+git_ferret/cli.py           typer app, three subcommands
 tests/__init__.py           empty; makes tests.helpers importable
 tests/helpers.py            importable git fixture builders (make_repo, commit, run, clone_local)
 tests/conftest.py           pytest fixtures wrapping tests.helpers
@@ -89,7 +89,7 @@ tests/test_report.py
 The foundation. Every later task depends on `run_git` and the repo fixture helpers, so this lands first.
 
 **Files:**
-- Create: `pyproject.toml`, `git_wombat/__init__.py`, `git_wombat/gitcmd.py`, `tests/__init__.py`, `tests/helpers.py`, `tests/conftest.py`, `tests/test_gitcmd.py`
+- Create: `pyproject.toml`, `git_ferret/__init__.py`, `git_ferret/gitcmd.py`, `tests/__init__.py`, `tests/helpers.py`, `tests/conftest.py`, `tests/test_gitcmd.py`
 
 **Interfaces:**
 - Produces:
@@ -118,7 +118,7 @@ All test modules import helpers as `from tests.helpers import commit, make_repo,
 # tests/test_gitcmd.py
 from pathlib import Path
 import pytest
-from git_wombat.gitcmd import GitError, run_git, run_git_text, git_available
+from git_ferret.gitcmd import GitError, run_git, run_git_text, git_available
 
 
 def test_run_git_returns_stdout(make_repo):
@@ -149,7 +149,7 @@ def test_git_available():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_gitcmd.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'git_wombat'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'git_ferret'`
 
 - [ ] **Step 3: Create `pyproject.toml`**
 
@@ -159,7 +159,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "git-wombat"
+name = "git-ferret"
 version = "0.1.0"
 description = "Read-only reporting tool for auditing many local git repositories"
 requires-python = ">=3.11"
@@ -169,10 +169,10 @@ dependencies = ["typer>=0.12", "rich>=13"]
 dev = ["pytest>=8"]
 
 [project.scripts]
-git-wombat = "git_wombat.cli:main"
+git-ferret = "git_ferret.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["git_wombat*"]
+include = ["git_ferret*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -180,9 +180,9 @@ testpaths = ["tests"]
 
 - [ ] **Step 4: Implement `gitcmd.py`**
 
-`git_wombat/__init__.py`: set `__version__ = "0.1.0"`.
+`git_ferret/__init__.py`: set `__version__ = "0.1.0"`.
 
-`git_wombat/gitcmd.py` — every subprocess call in the project goes here:
+`git_ferret/gitcmd.py` — every subprocess call in the project goes here:
 
 ```python
 class GitError(Exception):
@@ -229,7 +229,7 @@ Expected: 4 passed
 - [ ] **Step 7: Commit**
 
 ```bash
-git add pyproject.toml git_wombat tests
+git add pyproject.toml git_ferret tests
 git commit -m "feat: add packaging and git subprocess seam"
 ```
 
@@ -240,7 +240,7 @@ git commit -m "feat: add packaging and git subprocess seam"
 Shared dataclasses. Locking these now prevents the type drift that bites in Task 6-9.
 
 **Files:**
-- Create: `git_wombat/models.py`
+- Create: `git_ferret/models.py`
 - Test: `tests/test_models.py`
 
 **Interfaces:**
@@ -257,7 +257,7 @@ Shared dataclasses. Locking these now prevents the type drift that bites in Task
 ```python
 # tests/test_models.py
 from pathlib import Path
-from git_wombat.models import Finding, RepoReport, Status
+from git_ferret.models import Finding, RepoReport, Status
 
 def test_finding_defaults():
     f = Finding(branch="feat/x", status=Status.NOT_PUSHED)
@@ -277,7 +277,7 @@ def test_status_values_are_exactly_the_documented_set():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_models.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'git_wombat.models'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'git_ferret.models'`
 
 - [ ] **Step 3: Implement `models.py`**
 
@@ -295,7 +295,7 @@ Expected: 3 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add git_wombat/models.py tests/test_models.py
+git add git_ferret/models.py tests/test_models.py
 git commit -m "feat: add shared finding and report models"
 ```
 
@@ -306,13 +306,13 @@ git commit -m "feat: add shared finding and report models"
 Identity precedence is the spec's `--author` > TOML > `git config`, with the empty-match trap called out in Review Focus.
 
 **Files:**
-- Create: `git_wombat/config.py`
+- Create: `git_ferret/config.py`
 - Test: `tests/test_config.py`
 
 **Interfaces:**
 - Consumes: `run_git_text`, `run_git` from Task 1.
 - Produces:
-  - `Config.load(path: Path | None = None) -> Config` — defaults to `Path.home() / ".git-wombat.toml"`.
+  - `Config.load(path: Path | None = None) -> Config` — defaults to `Path.home() / ".git-ferret.toml"`.
   - `Config.author: list[str]`, `Config.whitelist: list[str]`.
   - `Config.is_whitelisted(branch: str) -> bool` — `fnmatch.fnmatchcase`, so `*` and `?` work and matching is case-sensitive.
   - `Config.is_excluded(branch: str, base_ref: str | None) -> bool` — true for `main`, `master`, the base ref, or any whitelist match.
@@ -325,7 +325,7 @@ Identity precedence is the spec's `--author` > TOML > `git config`, with the emp
 ```python
 # tests/test_config.py
 from pathlib import Path
-from git_wombat.config import Config, identity_matches, resolve_identities
+from git_ferret.config import Config, identity_matches, resolve_identities
 
 
 def test_whitelist_supports_glob_star():
@@ -379,7 +379,7 @@ def test_identity_matches_any_commit_any_identity():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_config.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'git_wombat.config'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'git_ferret.config'`
 
 - [ ] **Step 3: Implement `config.py`**
 
@@ -400,7 +400,7 @@ Expected: 7 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add git_wombat/config.py tests/test_config.py
+git add git_ferret/config.py tests/test_config.py
 git commit -m "feat: add config loading, identity resolution, and whitelist globbing"
 ```
 
@@ -411,7 +411,7 @@ git commit -m "feat: add config loading, identity resolution, and whitelist glob
 Nested-repo handling is Review Focus #9 and needs a test here, not in the CLI.
 
 **Files:**
-- Create: `git_wombat/discovery.py`
+- Create: `git_ferret/discovery.py`
 - Test: `tests/test_discovery.py`
 
 **Interfaces:**
@@ -429,7 +429,7 @@ Nested-repo handling is Review Focus #9 and needs a test here, not in the CLI.
 ```python
 # tests/test_discovery.py
 from pathlib import Path
-from git_wombat.discovery import discover_repos, is_bare, is_submodule, list_worktrees
+from git_ferret.discovery import discover_repos, is_bare, is_submodule, list_worktrees
 
 
 def test_discovers_recursively(tmp_path, make_repo):
@@ -470,7 +470,7 @@ def test_list_worktrees_returns_main_with_branch(make_repo, tmp_path):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_discovery.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'git_wombat.discovery'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'git_ferret.discovery'`
 
 - [ ] **Step 3: Implement `discovery.py`**
 
@@ -490,7 +490,7 @@ Expected: 6 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add git_wombat/discovery.py tests/test_discovery.py
+git add git_ferret/discovery.py tests/test_discovery.py
 git commit -m "feat: add repository and worktree discovery"
 ```
 
@@ -501,7 +501,7 @@ git commit -m "feat: add repository and worktree discovery"
 Owns Review Focus #2 (stale local main) and #8 (fetch failure).
 
 **Files:**
-- Create: `git_wombat/gitops.py` — fetch, base resolution, tree hashes, ahead/behind, gone detection
+- Create: `git_ferret/gitops.py` — fetch, base resolution, tree hashes, ahead/behind, gone detection
 - Test: `tests/test_gitops.py`
 
 **Interfaces:**
@@ -521,7 +521,7 @@ Owns Review Focus #2 (stale local main) and #8 (fetch failure).
 ```python
 # tests/test_gitops.py
 from pathlib import Path
-from git_wombat.gitops import (
+from git_ferret.gitops import (
     fetch_all, is_shallow, list_branches, resolve_base_ref, tree_hash,
 )
 
@@ -543,7 +543,7 @@ def test_resolve_base_ref_none_when_absent(make_repo, tmp_path):
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\n")
     commit(repo, "base")
-    run = __import__("git_wombat.gitcmd", fromlist=["run_git"])
+    run = __import__("git_ferret.gitcmd", fromlist=["run_git"])
     run.run(repo, "branch", "-m", "main", "trunk")
     assert resolve_base_ref(repo) is None
 
@@ -587,7 +587,7 @@ def test_is_shallow_false_for_full_clone(make_repo, tmp_path):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_gitops.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'git_wombat.gitops'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'git_ferret.gitops'`
 
 - [ ] **Step 3: Implement `gitops.py`**
 
@@ -605,7 +605,7 @@ Expected: 7 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add git_wombat/gitops.py tests/test_gitops.py
+git add git_ferret/gitops.py tests/test_gitops.py
 git commit -m "feat: add fetch, base ref resolution, and branch listing"
 ```
 
@@ -616,7 +616,7 @@ git commit -m "feat: add fetch, base ref resolution, and branch listing"
 The largest task. Worktree state plus per-branch status, with the asymmetric whitelist rule.
 
 **Files:**
-- Create: `git_wombat/analysis/__init__.py`, `git_wombat/analysis/local.py`
+- Create: `git_ferret/analysis/__init__.py`, `git_ferret/analysis/local.py`
 - Test: `tests/test_local.py`
 
 **Interfaces:**
@@ -631,10 +631,10 @@ The largest task. Worktree state plus per-branch status, with the asymmetric whi
 ```python
 # tests/test_local.py
 from pathlib import Path
-from git_wombat.analysis.local import analyse_local
-from git_wombat.config import Config
-from git_wombat.models import Status
-from git_wombat.gitops import resolve_base_ref
+from git_ferret.analysis.local import analyse_local
+from git_ferret.config import Config
+from git_ferret.models import Status
+from git_ferret.gitops import resolve_base_ref
 from tests.helpers import commit, make_repo, run
 
 
@@ -709,7 +709,7 @@ def test_no_base_branch_skips_with_reason(make_repo, tmp_path):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_local.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'git_wombat.analysis.local'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'git_ferret.analysis.local'`
 
 - [ ] **Step 3: Implement `analysis/local.py`**
 
@@ -727,7 +727,7 @@ Expected: 7 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add git_wombat/analysis tests/test_local.py
+git add git_ferret/analysis tests/test_local.py
 git commit -m "feat: add local branch and worktree analysis"
 ```
 
@@ -738,7 +738,7 @@ git commit -m "feat: add local branch and worktree analysis"
 The technically hardest part, and where the verified exit codes earn their keep. Owns Review Focus #1, #4, #5.
 
 **Files:**
-- Create: `git_wombat/analysis/merged.py`
+- Create: `git_ferret/analysis/merged.py`
 - Test: `tests/test_merged.py`
 
 **Interfaces:**
@@ -755,8 +755,8 @@ The technically hardest part, and where the verified exit codes earn their keep.
 ```python
 # tests/test_merged.py
 from pathlib import Path
-from git_wombat.analysis.merged import MergeVerdict, merge_verdict, remote_branches
-from git_wombat.gitops import is_shallow
+from git_ferret.analysis.merged import MergeVerdict, merge_verdict, remote_branches
+from git_ferret.gitops import is_shallow
 from tests.helpers import clone_local, commit, make_repo, run
 
 
@@ -844,7 +844,7 @@ def test_remote_branches_lists_origin_refs(tmp_path):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_merged.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'git_wombat.analysis.merged'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'git_ferret.analysis.merged'`
 
 - [ ] **Step 3: Implement `analysis/merged.py`**
 
@@ -876,7 +876,7 @@ Expected: 6 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add git_wombat/analysis/merged.py tests/test_merged.py
+git add git_ferret/analysis/merged.py tests/test_merged.py
 git commit -m "feat: add tree-based merge verdict analysis"
 ```
 
@@ -887,7 +887,7 @@ git commit -m "feat: add tree-based merge verdict analysis"
 Owns Review Focus #3 — the gate that stops the tool recommending deletion of a branch with unpushed local work.
 
 **Files:**
-- Create: `git_wombat/analysis/remote.py`
+- Create: `git_ferret/analysis/remote.py`
 - Test: `tests/test_remote.py`
 
 **Interfaces:**
@@ -902,11 +902,11 @@ Owns Review Focus #3 — the gate that stops the tool recommending deletion of a
 ```python
 # tests/test_remote.py
 from pathlib import Path
-from git_wombat.analysis.merged import analyse_merged_candidates
-from git_wombat.analysis.remote import analyse_remote, local_branch_unpushed
-from git_wombat.config import Config
-from git_wombat.models import Status
-from git_wombat.gitops import resolve_base_ref
+from git_ferret.analysis.merged import analyse_merged_candidates
+from git_ferret.analysis.remote import analyse_remote, local_branch_unpushed
+from git_ferret.config import Config
+from git_ferret.models import Status
+from git_ferret.gitops import resolve_base_ref
 from tests.helpers import clone_local, commit, make_repo, run
 
 
@@ -995,7 +995,7 @@ def test_empty_identities_lists_all_remote_branches(tmp_path, make_repo):
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_remote.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'git_wombat.analysis.remote'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'git_ferret.analysis.remote'`
 
 - [ ] **Step 3: Implement `analysis/remote.py`**
 
@@ -1013,7 +1013,7 @@ Expected: 6 passed
 - [ ] **Step 5: Commit**
 
 ```bash
-git add git_wombat/analysis/remote.py tests/test_remote.py
+git add git_ferret/analysis/remote.py tests/test_remote.py
 git commit -m "feat: add remote branch filtering and safe-to-delete gating"
 ```
 
@@ -1024,7 +1024,7 @@ git commit -m "feat: add remote branch filtering and safe-to-delete gating"
 Owns Review Focus #10 (piped output must be clean markdown).
 
 **Files:**
-- Create: `git_wombat/report.py`, `git_wombat/cli.py`
+- Create: `git_ferret/report.py`, `git_ferret/cli.py`
 - Test: `tests/test_report.py`, `tests/test_cli.py`
 
 **Interfaces:**
@@ -1041,8 +1041,8 @@ Owns Review Focus #10 (piped output must be clean markdown).
 # tests/test_report.py
 from datetime import datetime
 from pathlib import Path
-from git_wombat.models import Finding, RepoReport, Status
-from git_wombat.report import render_report
+from git_ferret.models import Finding, RepoReport, Status
+from git_ferret.report import render_report
 
 
 def test_render_includes_repo_heading_and_findings():
@@ -1093,7 +1093,7 @@ def test_marker_survives_without_emoji():
 ```python
 # tests/test_cli.py
 from typer.testing import CliRunner
-from git_wombat.cli import build_parser
+from git_ferret.cli import build_parser
 
 runner = CliRunner()
 
@@ -1113,14 +1113,14 @@ def test_has_three_subcommands():
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pytest tests/test_report.py tests/test_cli.py -v`
-Expected: FAIL — `ModuleNotFoundError: No module named 'git_wombat.report'`
+Expected: FAIL — `ModuleNotFoundError: No module named 'git_ferret.report'`
 
 - [ ] **Step 3: Implement `report.py`**
 
 `render_report` is pure text and emits no escape codes. Structure:
 
 ```
-# git-wombat
+# git-ferret
 
 > ⚠️  N of M repositories analysed from stale local state (no fetch this run)
 
@@ -1147,13 +1147,13 @@ Expected: all passed
 
 - [ ] **Step 6: Verify piped output is clean markdown**
 
-Run: `git-wombat local . --no-fetch > /tmp/out.md` then `grep -c $'\x1b' /tmp/out.md; cat /tmp/out.md`
-Expected: grep count is 0; file starts with `# git-wombat`
+Run: `git-ferret local . --no-fetch > /tmp/out.md` then `grep -c $'\x1b' /tmp/out.md; cat /tmp/out.md`
+Expected: grep count is 0; file starts with `# git-ferret`
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add git_wombat/report.py git_wombat/cli.py tests
+git add git_ferret/report.py git_ferret/cli.py tests
 git commit -m "feat: add markdown report and CLI entry point"
 ```
 
@@ -1175,7 +1175,7 @@ Proves the three subcommands run against a realistic multi-repo tree and emit va
 ```python
 # tests/test_end_to_end.py
 from typer.testing import CliRunner
-from git_wombat.cli import build_parser
+from git_ferret.cli import build_parser
 from tests.helpers import clone_local, commit, make_repo, run
 
 runner = CliRunner()
@@ -1196,7 +1196,7 @@ def test_local_end_to_end_emits_valid_markdown(tmp_path, make_repo):
     root = _tree(tmp_path, make_repo)
     res = runner.invoke(build_parser(), ["local", str(root), "--no-fetch"])
     assert res.exit_code == 0, res.output
-    assert res.stdout.startswith("# git-wombat")
+    assert res.stdout.startswith("# git-ferret")
     assert "\x1b[" not in res.stdout
 
 
@@ -1230,7 +1230,7 @@ Expected: all passed
 
 - [ ] **Step 5: Manual verification against the real repo collection**
 
-Run: `git-wombat local ~/fran-Repositories --no-fetch | head -40`
+Run: `git-ferret local ~/fran-Repositories --no-fetch | head -40`
 Expected: one heading per discovered repository, markers on every branch line, no tracebacks.
 
 - [ ] **Step 6: Commit**

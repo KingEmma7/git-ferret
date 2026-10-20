@@ -40,7 +40,7 @@ These would make the tool a failure even if every stated goal were met:
 
 ## Constraints
 
-- Python 3.11+ (`tomllib` is stdlib from 3.11).
+- Python 3.14+ (`requires-python` in `pyproject.toml` is the source of truth).
 - `pip install`-able, console entry point.
 - Shell out to `git` via `subprocess`. Do not reimplement git behaviour in a library.
 - Repository read-only except `merge --ff-only` behind an explicit flag.

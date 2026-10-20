@@ -53,6 +53,20 @@ jobs:
                   extras: test
             - run: make test PYTHON=python
 
+    # Windows gets its own job because several fixes exist only for it: path
+    # separators in submodule detection, and cp1252 decoding of both git's
+    # output and the report. An Ubuntu-only matrix cannot see a regression in
+    # any of them. No `make`: the runner is not guaranteed to have it.
+    test-windows:
+        runs-on: windows-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+            - uses: ./.github/actions/setup
+              with:
+                  extras: test
+            - run: python -m pytest
+
     coverage:
         runs-on: ubuntu-latest
         timeout-minutes: 10
@@ -107,7 +121,7 @@ jobs:
     merge-gate:
         runs-on: ubuntu-latest
         if: always()
-        needs: [lint, type-check, test, coverage, build, audit]
+        needs: [lint, type-check, test, test-windows, coverage, build, audit]
         steps:
             - name: Check for failures
               if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}

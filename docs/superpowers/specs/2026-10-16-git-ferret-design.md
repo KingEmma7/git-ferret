@@ -491,7 +491,8 @@ mistaken for a current one.
 Printed **once at the end** when **any** repository in the run is being read from stale local state
 (whether because `--no-fetch` was passed or because its fetch failed), naming the count. Not gated
 on *every* repository being stale — a single stale repo among thirty is exactly the case worth
-nagging about, and a warning that only fires when everything is stale would miss it.
+nagging about, and a warning that only fires when everything is stale would miss it. A repository
+with no remote is excluded: there is nothing it could have refreshed.
 
 Every repository heading additionally carries its own `fetched <age> ago`, so the per-repo detail is
 always available even when the top-level warning is not triggered.

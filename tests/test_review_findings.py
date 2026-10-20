@@ -56,7 +56,7 @@ def test_other_remotes_main_is_not_silently_dropped(tmp_path: Path):
     commit(mirror_src, "mirror base")
 
     clone = clone_local(origin_src, tmp_path / "clone")
-    run(clone, "remote", "add", "mirror", f"file://{mirror_src}")
+    run(clone, "remote", "add", "mirror", mirror_src.resolve().as_uri())
     run(clone, "fetch", "--all", "--prune")
 
     assert _base(clone) == "origin/main"

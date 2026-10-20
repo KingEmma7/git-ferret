@@ -23,6 +23,23 @@ def test_run_git_text_raises_on_error(tmp_path: Path):
     assert exc.value.returncode != 0
 
 
+def test_git_output_is_decoded_as_utf8_regardless_of_locale(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    # The console locale is cp1252 on Windows. git's output is UTF-8, and a
+    # branch with an accented name must not crash the run.
+    captured: dict[str, object] = {}
+
+    def fake_run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
+
+    monkeypatch.setattr("git_ferret.gitcmd.subprocess.run", fake_run)
+    run_git(tmp_path, "status")
+    assert captured["encoding"] == "utf-8"
+    assert captured["errors"] == "replace"
+
+
 def test_run_git_check_false_does_not_raise(tmp_path: Path):
     repo = make_repo(tmp_path / "r")
     proc = run_git(repo, "rev-parse", "does-not-exist")

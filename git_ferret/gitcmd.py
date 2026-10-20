@@ -45,6 +45,12 @@ def run_git(repo: Path, *args: str, check: bool = False) -> CompletedProcess:
     -- raises :class:`GitError` like any other git failure, so callers have one
     error type to handle instead of two plus the OSError that a missing binary
     would otherwise leak.
+
+    Output is decoded as UTF-8 explicitly. git stores refnames and commit text
+    as bytes and emits them untouched; the process locale is cp1252 on a default
+    Windows console, where a branch with an accented name would otherwise kill
+    the run with a UnicodeDecodeError. ``errors="replace"`` degrades a name that
+    is not valid UTF-8 to U+FFFD instead of failing the whole repository.
     """
     try:
         proc = subprocess.run(
@@ -52,6 +58,8 @@ def run_git(repo: Path, *args: str, check: bool = False) -> CompletedProcess:
             check=False,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired:

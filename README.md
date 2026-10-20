@@ -50,7 +50,8 @@ edits, but skipping keeps this tool from moving a working tree that has unsaved 
 
 ## Install
 
-Needs Python 3.14 or newer, and `git` on your `PATH`.
+Needs Python 3.14 or newer, and git 2.38 or newer on your `PATH` (`merged` uses
+`git merge-tree --write-tree`, which arrived in 2.38).
 
 ### From a checkout
 

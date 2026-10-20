@@ -95,6 +95,22 @@ def test_an_interrupt_in_a_remote_run_is_reported_too(
     assert "aborted" in capsys.readouterr().err
 
 
+def test_a_malformed_config_is_one_line_and_not_a_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    # A broken config file is a mistake the user can fix, exactly like a typo
+    # in a flag, so it gets the same one-line treatment instead of a traceback.
+    config = tmp_path / "bad.toml"
+    config.write_text("author = [\n")
+    monkeypatch.setattr("git_ferret.config.DEFAULT_CONFIG_PATH", config)
+
+    assert _main(["local", str(tmp_path)]) == 1
+    err = capsys.readouterr().err
+    assert "Traceback" not in err
+    assert len(err.strip().splitlines()) == 1
+    assert str(config) in err
+
+
 def test_an_explicit_exit_code_from_a_command_is_honoured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

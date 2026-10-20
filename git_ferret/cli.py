@@ -25,7 +25,7 @@ from git_ferret.analysis.remote import (
     analyse_merged_candidates,
     analyse_remote,
 )
-from git_ferret.config import Config, resolve_identities
+from git_ferret.config import Config, ConfigError, resolve_identities
 from git_ferret.discovery import discover_repos, list_worktrees
 from git_ferret.gitcmd import GitError, run_git
 from git_ferret.gitops import fetch_all, refs_updated_at, resolve_base_ref
@@ -143,14 +143,15 @@ class UsageError(Exception):
 
 
 # Everything the entry point treats as "you typed it wrong": the tool's own
-# error, plus the framework's. typer has exposed its own exception hierarchy
-# since 0.27.2 -- the floor in pyproject.toml -- so an unknown flag or command
-# arrives as typer's, not click's, and an `except` clause written against
-# click's classes misses it entirely: the error escapes unhandled and the user
-# gets a traceback for a typo. Both stringify to the message the user needs,
-# which is why one handler covers them.
+# errors (bad usage, unusable config), plus the framework's. typer has exposed
+# its own exception hierarchy since 0.27.2 -- the floor in pyproject.toml -- so
+# an unknown flag or command arrives as typer's, not click's. An `except` clause
+# written against click's classes would miss it entirely: the error escapes
+# unhandled and the user gets a traceback for a typo. Both stringify to the
+# message the user needs, which is why one handler covers them.
 _USAGE_ERRORS: tuple[type[Exception], ...] = (
     UsageError,
+    ConfigError,
     typer.TyperException,
     click.ClickException,
 )

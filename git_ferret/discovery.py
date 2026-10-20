@@ -9,7 +9,7 @@ the same tree twice.
 from __future__ import annotations
 
 import os
-from pathlib import Path
+from pathlib import Path, PurePath
 
 from git_ferret.gitcmd import run_git_text
 
@@ -26,29 +26,30 @@ def is_submodule(path: Path) -> bool:
     A submodule's ``.git`` is a file pointing into the superproject's
     ``.git/modules`` tree. Those are vendored content and get skipped.
     """
-    dot_git = path / ".git"
-    if not dot_git.is_file():
-        return False
-    try:
-        content = dot_git.read_text().strip()
-    except OSError:
-        return False
-    if not content.startswith("gitdir:"):
-        return False
-    target = content.split(":", 1)[1].strip()
-    resolved = Path(target)
-    if not resolved.is_absolute():
-        resolved = (path / resolved).resolve()
-    return ".git/modules/" in f"{resolved}/" or "/.git/modules" in f"{resolved}"
+    target = _gitdir_target(path)
+    return target is not None and _is_modules_path(target)
+
+
+def _is_modules_path(target: PurePath) -> bool:
+    """Whether *target* is a gitdir under a ``.git/modules`` tree.
+
+    Checked on path components rather than on a ``"/"``-joined string: git
+    writes backslashes in a gitdir pointer on Windows, so a substring test for
+    ``.git/modules`` silently missed every submodule there. ``PurePath`` keeps
+    this testable on any platform, including with a Windows path.
+    """
+    parts = target.parts
+    return any(
+        parts[index] == ".git" and parts[index + 1] == "modules" for index in range(len(parts) - 1)
+    )
 
 
 def _gitdir_target(path: Path) -> Path | None:
-    """The git directory a ``.git`` *file* points at, if this is a worktree.
+    """The git directory a ``.git`` *file* points at, if it points at one.
 
-    A linked worktree's ``.git`` is a file naming its directory under the main
-    repository's ``.git/worktrees/``. That is what identifies a secondary
-    worktree as belonging to a repository already discovered, rather than being
-    a repository in its own right.
+    A linked worktree's ``.git`` names a directory under the main repository's
+    ``.git/worktrees/``; a submodule's names one under ``.git/modules/``. Both
+    are identified by where the pointer goes, not by the checkout itself.
     """
     dot_git = path / ".git"
     if not dot_git.is_file():

@@ -1,8 +1,9 @@
 """Tests for repository and worktree discovery."""
 
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from git_ferret.discovery import (
+    _is_modules_path,  # pyright: ignore[reportPrivateUsage]
     discover_repos,
     is_git_dir,
     is_submodule,
@@ -105,6 +106,19 @@ def test_a_relative_gitdir_is_resolved_against_the_repository(tmp_path: Path):
     sub.mkdir()
     (sub / ".git").write_text("gitdir: ../.git/modules/sub\n")
     assert is_submodule(sub) is True
+
+
+def test_a_gitdir_written_with_windows_separators_is_still_under_modules():
+    # git on Windows writes C:\src\super\.git\modules\sub. The old check tested
+    # the formatted path for ".git/modules", which never matches backslashes, so
+    # every submodule was reported as one of the user's own repositories.
+    target = PureWindowsPath(r"C:\src\super\.git\modules\sub")
+    assert _is_modules_path(target) is True
+
+
+def test_a_windows_worktree_path_is_not_mistaken_for_a_submodule():
+    target = PureWindowsPath(r"C:\src\super\.git\worktrees\hotfix")
+    assert _is_modules_path(target) is False
 
 
 def test_identity_is_none_for_a_directory_that_is_not_a_repository(tmp_path: Path):

@@ -446,8 +446,6 @@ Shape:
 ```markdown
 # git-ferret
 
-> ⚠️  2 of 4 repositories analysed from stale local state (no fetch this run)
-
 ## api-server
 fetched 2026-10-16 09:41:02 · base: origin/main
 
@@ -462,6 +460,8 @@ never fetched
 
 - 🧭 `web-app` [NO BASE] no base branch (neither origin/main nor origin/master)
 - ✏️ `.` [DIRTY] 4 files modified, 1 untracked
+
+> ⚠️  2 of 4 repositories analysed from stale local state (no fetch this run)
 ```
 
 Headings are **relative to the scanned root**: the root the user typed is the part of the path they
@@ -483,12 +483,12 @@ formatted one way on screen and another in a file. The text therefore carries th
 between sections, and the terminal is rendered so the heading does not pad itself.
 
 Each repository heading carries **fetch age**. When a run reads entirely from stale local state,
-a warning is printed once at the top. A conclusion drawn from old refs must never be mistaken for a
-current one.
+a warning is printed once at the end of the report. A conclusion drawn from old refs must never be
+mistaken for a current one.
 
 ### Stale-run warning
 
-Printed **once at the top** when **any** repository in the run is being read from stale local state
+Printed **once at the end** when **any** repository in the run is being read from stale local state
 (whether because `--no-fetch` was passed or because its fetch failed), naming the count. Not gated
 on *every* repository being stale — a single stale repo among thirty is exactly the case worth
 nagging about, and a warning that only fires when everything is stale would miss it.

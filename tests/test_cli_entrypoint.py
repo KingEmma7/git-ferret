@@ -111,6 +111,23 @@ def test_a_malformed_config_is_one_line_and_not_a_traceback(
     assert str(config) in err
 
 
+def test_an_unexpected_failure_is_one_line_and_exits_two(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
+    # Exit 1 is reserved for what the caller typed. A run that could not finish
+    # is the documented 2, so a script can tell "fix your command" from "come
+    # back later" without parsing stderr.
+    def boom(root: Path) -> list[Path]:
+        raise RuntimeError("disk on fire")
+
+    monkeypatch.setattr(cli, "discover_repos", boom)
+    assert _main(["local", str(tmp_path)]) == 2
+    err = capsys.readouterr().err
+    assert "Traceback" not in err
+    assert len(err.strip().splitlines()) == 1
+    assert "disk on fire" in err
+
+
 def test_an_explicit_exit_code_from_a_command_is_honoured(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

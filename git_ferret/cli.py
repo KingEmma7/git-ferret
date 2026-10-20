@@ -324,8 +324,9 @@ def main() -> None:
     """Entry point.
 
     Everything this tool considers a usage problem -- a bad flag, an unknown
-    command, a path that is not a directory -- is one line on stderr and exit
-    1. Findings never change the exit code.
+    command, a path that is not a directory, an unusable config file -- is one
+    line on stderr and exit 1. A failure that stops the run before it finishes
+    is one line and exit 2. Findings never change the exit code.
 
     ``standalone_mode=False`` is what makes that possible: it hands the
     framework's errors over instead of letting it print and exit itself. Without
@@ -345,6 +346,12 @@ def main() -> None:
     except typer.Abort:
         _warn("aborted")
         raise SystemExit(1) from None
+    # Anything else is an environment failure or a bug: the run could not
+    # complete. That is the documented meaning of exit 2, and it is what tells
+    # a crash apart from a usage error for anything scripting this tool.
+    except Exception as exc:
+        _warn(f"error: {exc}")
+        raise SystemExit(2) from None
     # Every command is annotated `-> None`, so a return value here is the exit
     # code of a `typer.Exit` a command raised deliberately. Anything else is a
     # successful run.

@@ -25,11 +25,17 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def _cli(*args: str) -> subprocess.CompletedProcess[str]:
+    # The CLI writes UTF-8 whatever the console locale; decode it as such. With
+    # the locale default (cp1252 on Windows) the reader thread raises on the
+    # first emoji marker and leaves stdout as None, which looks like the CLI
+    # printing nothing.
     return subprocess.run(
         [sys.executable, "-m", "git_ferret.cli", *args],
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         cwd=REPO_ROOT,
     )
 
@@ -241,6 +247,8 @@ def test_a_git_that_cannot_run_exits_two_with_one_line(tmp_path: Path):
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         cwd=REPO_ROOT,
         env={**os.environ, "PATH": str(empty_path)},
     )

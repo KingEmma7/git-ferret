@@ -321,3 +321,30 @@ def test_a_failed_fetch_with_a_timestamp_names_the_state_it_read():
     rep = _repo(fetched_at=datetime(2026, 10, 16, 9, 41, 2), fetch_failed=True)
     out = render_report([rep], stale_count=1)
     assert "fetch failed; analysed from state as of 2026-10-16 09:41:02" in out
+
+
+class _AsciiStream(io.StringIO):
+    """A non-TTY stream whose encoding cannot represent the decorative glyphs."""
+
+    encoding = "ascii"
+
+
+def test_emit_survives_a_stream_that_cannot_encode_emoji():
+    # Windows consoles and redirected output can be cp1252 or ASCII. The
+    # report must still be written, because the bracketed marker carries the
+    # meaning; the emoji is decoration.
+    rep = _repo()
+    rep.findings.append(Finding(branch="feat/x", status=Status.NOT_PUSHED))
+    stream = _AsciiStream()
+
+    emit(render_repo(rep), stream)
+
+    output = stream.getvalue()
+    assert "`feat/x` [NOT PUSHED]" in output
+    assert "## /tmp/api" in output
+
+
+def test_emit_leaves_utf8_output_untouched():
+    buffer = io.StringIO()
+    emit("⬆️ `b` [NOT PUSHED]\n", buffer)
+    assert buffer.getvalue() == "⬆️ `b` [NOT PUSHED]\n"

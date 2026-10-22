@@ -110,6 +110,15 @@ def test_a_relative_gitdir_is_resolved_against_the_repository(tmp_path: Path):
     assert is_submodule(sub) is True
 
 
+def test_a_directory_named_modules_outside_git_is_not_a_submodule(tmp_path: Path):
+    # The check is the `.git/modules` path component, not the word "modules"
+    # appearing anywhere, and it has to work with Windows separators too.
+    plain = tmp_path / "modules" / "plain"
+    plain.mkdir(parents=True)
+    (plain / ".git").write_text(f"gitdir: {tmp_path / 'modules' / 'somewhere'}\n")
+    assert is_submodule(plain) is False
+
+
 def test_identity_is_none_for_a_directory_that_is_not_a_repository(tmp_path: Path):
     plain = tmp_path / "plain"
     plain.mkdir()

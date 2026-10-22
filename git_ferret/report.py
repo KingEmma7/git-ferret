@@ -170,6 +170,26 @@ def _split_heading(text: str) -> tuple[str, str]:
     return "", text
 
 
+def _encodable(text: str, out: TextIO) -> str:
+    """*text* as *out* can write it.
+
+    A redirected stream on Windows can be cp1252 or ASCII, and the report
+    carries emoji. The bracketed marker is what means something, so replacing
+    an unrepresentable glyph is better than failing the whole run with
+    ``UnicodeEncodeError``.
+    """
+    encoding = getattr(out, "encoding", None)
+    if not encoding:
+        return text
+    try:
+        text.encode(encoding)
+    except LookupError:
+        return text
+    except UnicodeEncodeError:
+        return text.encode(encoding, errors="replace").decode(encoding, errors="replace")
+    return text
+
+
 def emit(text: str, stream: TextIO | None = None) -> None:
     """Write *text*, richly only when the destination is a terminal.
 
@@ -177,7 +197,7 @@ def emit(text: str, stream: TextIO | None = None) -> None:
     """
     out = stream if stream is not None else sys.stdout
     if not getattr(out, "isatty", lambda: False)():
-        out.write(text)
+        out.write(_encodable(text, out))
         return
 
     from rich.console import Console

@@ -49,7 +49,7 @@ def test_merged_uses_origin_base_after_fetching(tmp_path: Path, capsys: pytest.C
     repo = make_repo(tmp_path / "local")
     (repo / "f.txt").write_text("a\nb\n")
     commit(repo, "base")
-    run(repo, "remote", "add", "origin", f"file://{src}")
+    run(repo, "remote", "add", "origin", src.resolve().as_uri())
     assert resolve_base_ref(repo) == "main"  # pre-fetch
 
     run_command("merged", Path(tmp_path / "local"), False, [], None)
@@ -65,7 +65,7 @@ def test_ground_truth_is_merged_after_the_run(tmp_path: Path):
     repo = make_repo(tmp_path / "local")
     (repo / "f.txt").write_text("a\nb\n")
     commit(repo, "base")
-    run(repo, "remote", "add", "origin", f"file://{src}")
+    run(repo, "remote", "add", "origin", src.resolve().as_uri())
     run_command("merged", Path(tmp_path / "local"), False, [], None)
     assert resolve_base_ref(repo) == "origin/main"
     assert merge_verdict(repo, "origin/main", "origin/feat").value == "MERGED"
@@ -79,7 +79,7 @@ def test_stale_state_under_no_fetch_is_flagged_stale(
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\nb\n")
     commit(repo, "base")
-    run(repo, "remote", "add", "origin", f"file://{src}")
+    run(repo, "remote", "add", "origin", src.resolve().as_uri())
     run_command("local", Path(tmp_path / "r"), True, [], None)
     capsys.readouterr()
 
@@ -95,7 +95,7 @@ def test_heading_does_not_claim_a_fetch_that_did_not_happen(
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\nb\n")
     commit(repo, "base")
-    run(repo, "remote", "add", "origin", f"file://{src}")
+    run(repo, "remote", "add", "origin", src.resolve().as_uri())
     run_command("local", Path(tmp_path / "r"), True, [], None)
     out = capsys.readouterr().out
     # Under --no-fetch the heading must not read as a fresh fetch.
@@ -107,7 +107,7 @@ def test_successful_fetch_is_not_reported_stale(tmp_path: Path, capsys: pytest.C
     repo = make_repo(tmp_path / "r")
     (repo / "f.txt").write_text("a\nb\n")
     commit(repo, "base")
-    run(repo, "remote", "add", "origin", f"file://{src}")
+    run(repo, "remote", "add", "origin", src.resolve().as_uri())
     run_command("local", Path(tmp_path / "r"), False, [], None)
     out = capsys.readouterr().out
     assert "stale" not in out.lower()

@@ -359,6 +359,8 @@ $ git-ferret local ~/src > report.md
 
 No ANSI escapes and no tables ever reach the file. Emoji are decorative only: the bracketed
 marker always carries the meaning on its own, so a terminal without an emoji font loses nothing.
+Git output is decoded as UTF-8 regardless of the console code page, and a glyph the destination
+cannot encode is replaced rather than failing the run.
 
 | Marker | Meaning |
 |---|---|

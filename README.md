@@ -441,8 +441,8 @@ the testing philosophy, and the full list of targets. Read [CONTRIBUTING.md](CON
 before opening your first pull request.
 
 CI runs the same checks on Python 3.14 on Linux, macOS, and Windows, plus coverage, a wheel build
-with a CLI smoke test, and a `pip-audit` scan. Releases are cut by release-please from Conventional
-Commits.
+with a CLI smoke test, a dependency review, and a `pip-audit` scan. Releases are cut by
+release-please from Conventional Commits.
 
 ## Documentation
 

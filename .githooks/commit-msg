@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Check the subject against the project's Conventional Commits rules.
+
+set -euo pipefail
+source "$(dirname "$0")/common.sh"
+
+run_global_hook commit-msg "$@"
+
+python=$(python_bin)
+exec "$python" scripts/check_commit_msg.py "$1"

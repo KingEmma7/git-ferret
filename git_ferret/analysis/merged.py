@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """The merge test: whether a branch's changes are already in the base branch.
 
 This is deliberately *not* decided by commit history. Ancestry-based checks are

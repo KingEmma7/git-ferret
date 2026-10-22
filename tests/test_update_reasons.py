@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Tests for the reasons --update declines to fast-forward, and where they land.
 
 "Not a fast-forward" must mean the branch genuinely diverged, not "we declined

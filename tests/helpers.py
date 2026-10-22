@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Importable git fixture builders, shared by every test module.
 
 These are plain functions, not pytest fixtures: a test calls ``make_repo`` at

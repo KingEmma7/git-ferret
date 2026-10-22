@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Tests for the --update write path.
 
 This is the only code in the project permitted to change a repository, so its

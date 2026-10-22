@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Tests for the tree-based merge verdict.
 
 These are the load-bearing tests of the whole tool: they decide whether a

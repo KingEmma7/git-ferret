@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Tests for gaps the whole-branch review found in already-shipped behaviour.
 
 Each maps to a finding: a marker that misleads, a feature the spec requires and

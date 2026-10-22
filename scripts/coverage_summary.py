@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Render ``coverage.xml`` as a Markdown table for the GitHub job summary.
 
 CI already fails the build on a low total (see ``fail_under`` in

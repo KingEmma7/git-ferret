@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """The command line interface.
 
 Three subcommands, each independently runnable. All default to fetching and all

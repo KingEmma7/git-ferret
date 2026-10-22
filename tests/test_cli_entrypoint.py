@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Tests for what the entry point does with a run that goes wrong.
 
 The exit code itself is covered end to end in ``test_freshness_and_exit.py``,

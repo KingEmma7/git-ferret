@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """The one seam between git-ferret and the git binary.
 
 Every git invocation in the project goes through this module, and no other

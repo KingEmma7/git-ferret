@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Rendering findings as markdown.
 
 The output must be readable on a terminal *and* valid markdown in a file, so

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Remote branch enumeration, filtering, and the safe-to-delete verdict.
 
 Two subcommands share this enumeration. ``remote`` answers "which remote

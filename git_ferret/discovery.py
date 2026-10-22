@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Finding the repositories to audit, and the worktrees inside each one.
 
 Discovery stops descending at the first repository it finds. A personal

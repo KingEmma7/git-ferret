@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Shared data shapes for analysis and reporting.
 
 Every analysis task produces these, and the report task renders them, so the

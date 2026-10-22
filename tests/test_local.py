@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Tests for local branch and worktree analysis."""
 
 from pathlib import Path

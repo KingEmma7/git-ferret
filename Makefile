@@ -5,7 +5,7 @@ SOURCES := git_ferret tests scripts
 # group cannot be added to pyproject.toml and forgotten here.
 EXTRAS := audit,build,lint,test,type
 
-.PHONY: help install format format-check lint lint-fix typecheck test coverage build audit clean check ci
+.PHONY: help install format format-check lint lint-fix check-spdx typecheck test coverage build audit clean check ci
 
 help: ## Show this help
 	@echo "Usage: make <target>"
@@ -26,6 +26,9 @@ lint: ## Lint with ruff
 
 lint-fix: ## Lint and apply safe fixes
 	$(PYTHON) -m ruff check --fix $(SOURCES)
+
+check-spdx: ## Check that every Python source file names its licence
+	$(PYTHON) scripts/check_spdx.py $(SOURCES)
 
 typecheck: ## Type check with pyright (strict)
 	$(PYTHON) -m pyright --pythonpath "$$($(PYTHON) -c 'import sys; print(sys.executable)')"
@@ -55,6 +58,6 @@ audit: ## Audit dependencies for known vulnerabilities
 clean: ## Remove build artifacts and caches
 	rm -rf build dist .pytest_cache .ruff_cache htmlcov .coverage coverage.xml
 
-check: format-check lint typecheck test ## Run the fast local checks
+check: format-check lint check-spdx typecheck test ## Run the fast local checks
 
-ci: format-check lint typecheck coverage build audit ## Run everything the CI pipeline checks
+ci: format-check lint check-spdx typecheck coverage build audit ## Run everything the CI pipeline checks

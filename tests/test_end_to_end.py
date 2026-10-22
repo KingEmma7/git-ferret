@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """End-to-end coverage: all three subcommands over a realistic repository tree."""
 
 from pathlib import Path

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Tests that a linked worktree is not reported as a second repository.
 
 A worktree whose directory sits beside its main repository (a common hotfix

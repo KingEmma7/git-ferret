@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Local branch and worktree state: what is checked out, and what is amiss."""
 
 from __future__ import annotations

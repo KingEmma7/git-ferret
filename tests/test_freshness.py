@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Tests for the two load-bearing freshness invariants.
 
 1. A run that reads local state never silently claims a fetch happened, and

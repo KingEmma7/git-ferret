@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """Git operations that back the analyses: fetch, base refs, branch state.
 
 Nothing here decides anything about what to report; it only asks git questions

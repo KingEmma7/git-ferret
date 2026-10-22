@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 r"""Tests for the CLI surface.
 
 Every assertion here is made against unstyled text. Rich styles a flag one

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+
 """User configuration: identity resolution and the branch whitelist.
 
 Identity precedence is ``--author`` > ``~/.git-ferret.toml`` > git config, and

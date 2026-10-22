@@ -5,15 +5,18 @@ SOURCES := git_ferret tests scripts
 # group cannot be added to pyproject.toml and forgotten here.
 EXTRAS := audit,build,lint,test,type
 
-.PHONY: help install hooks format format-check lint lint-fix check-spdx typecheck test coverage build audit clean check ci
+.PHONY: help install sync hooks format format-check lint lint-fix check-spdx typecheck test coverage build audit clean check ci
 
 help: ## Show this help
 	@echo "Usage: make <target>"
 	@echo
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-14s %s\n", $$1, $$2}'
 
-install: ## Install the package and dev tools (editable)
+install: ## Install the package and dev tools (editable, with pip)
 	$(PYTHON) -m pip install -e ".[$(EXTRAS)]"
+
+sync: ## Install everything from uv.lock, failing if the lockfile is stale
+	uv sync --all-extras --locked
 
 hooks: ## Use the checked-in git hooks for this repository only
 	git config --local core.hooksPath .githooks

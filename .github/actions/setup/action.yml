@@ -1,5 +1,5 @@
 name: Set up git-ferret
-description: Install Python and git-ferret with the optional dependencies a job needs
+description: Install Python and git-ferret from the locked uv environment
 
 inputs:
     python-version:
@@ -7,7 +7,7 @@ inputs:
         required: false
         default: '3.14'
     extras:
-        description: Comma-separated extras from pyproject.toml, empty for a runtime install
+        description: One optional-dependency group from pyproject.toml, empty for a runtime install
         required: false
         default: ''
 
@@ -16,18 +16,23 @@ inputs:
 runs:
     using: composite
     steps:
-        - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        # Activate the venv so every later step uses it directly: `python`,
+        # `make`, and the project's console scripts resolve inside `.venv`
+        # without a `uv run` prefix, including steps in the calling job.
+        - uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
           with:
+              version: '0.9.26'
               python-version: ${{ inputs.python-version }}
-              cache: 'pip'
-              cache-dependency-path: pyproject.toml
-        - name: Install git-ferret
+              enable-cache: true
+              cache-dependency-glob: uv.lock
+              activate-environment: true
+        - name: Install git-ferret from uv.lock
           shell: bash
           env:
               EXTRAS: ${{ inputs.extras }}
           run: |
               if [ -n "$EXTRAS" ]; then
-                  python -m pip install -e ".[$EXTRAS]"
+                  uv sync --locked --extra "$EXTRAS"
               else
-                  python -m pip install -e .
+                  uv sync --locked
               fi

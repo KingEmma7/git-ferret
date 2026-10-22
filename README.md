@@ -54,6 +54,22 @@ Needs Python 3.14 or newer, and `git` on your `PATH`.
 
 ### From a checkout
 
+With [uv](https://docs.astral.sh/uv/), one command builds an environment from the committed
+lockfile:
+
+```console
+$ git clone https://github.com/fran2889/git-ferret
+$ cd git-ferret
+$ uv sync --locked
+$ uv run git-ferret --help
+```
+
+`uv sync --locked` installs the runtime dependencies and the package in editable mode, and fails if
+`uv.lock` no longer matches `pyproject.toml`. Add `--all-extras` to install the tools behind
+`make check` as well.
+
+The pip route works too:
+
 ```console
 $ cd path/to/git-ferret
 $ python3 -m venv .venv
@@ -62,13 +78,12 @@ $ pip install -e .
 $ git-ferret --help
 ```
 
-On Windows the activation is `.venv\Scripts\activate`.
+On Windows the activation is `.venv\Scripts\activate`. `-e` installs in editable mode, so the
+command runs the code in your checkout and edits take effect without reinstalling. Drop it for a
+plain install, which copies the code into the environment.
 
-`-e` installs in editable mode, so the command runs the code in your checkout and edits take effect
-without reinstalling. Drop it for a plain install, which copies the code into the environment.
-
-To get the test suite and the tools behind `make check` as well, ask for the extras
-individually or let the Makefile install all of them at once:
+To get the test suite and the tools behind `make check` as well, ask for the extras individually or
+let the Makefile install all of them at once:
 
 ```console
 $ pip install -e ".[test,type,lint]"   # just the checks
@@ -77,18 +92,22 @@ $ make install                          # every extra, the same set the pipeline
 
 If `python3 -m venv` fails with `ensurepip is not available`, your Python is missing the venv module,
 on Debian and Ubuntu that is `apt install python3.14-venv`, matching your version. The environment has
-to be rebuilt afterwards. The uv route below avoids needing it at all.
+to be rebuilt afterwards. The uv route above avoids needing it at all.
 
-### With uv
+### Without a checkout
 
-[uv](https://docs.astral.sh/uv/) builds the same environment in one step, without touching the system
-Python:
+`uvx` runs the package straight from the repository into uv's cache, which is the quickest way to
+try it:
 
 ```console
-$ cd path/to/git-ferret
-$ uv venv
-$ uv pip install -e .
-$ .venv/bin/git-ferret --help
+$ uvx --from git+https://github.com/fran2889/git-ferret git-ferret --version
+```
+
+The first run downloads the package and its dependencies; later runs reuse the cache. `pipx` is the
+equivalent if you already use it:
+
+```console
+$ pipx install git+https://github.com/fran2889/git-ferret
 ```
 
 ### Without a virtual environment
@@ -115,7 +134,7 @@ $ source .venv/bin/activate
 $ git-ferret local ~/src                    # once activated
 ```
 
-With [uv](https://docs.astral.sh/uv/) you need no environment of your own:
+With uv you need no environment of your own:
 
 ```console
 $ uv run git-ferret local ~/src                    # editable install in .venv

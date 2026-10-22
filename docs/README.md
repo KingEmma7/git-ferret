@@ -13,7 +13,8 @@ output semantics, configuration, and regular use. These documents go deeper.
   branches, and Windows console encoding.
 - [Development](development.md): the local workflow, Make targets, git hooks, testing philosophy,
   and repository layout.
-- [Releasing](releasing.md): release-please, the draft release, and retrying a failed build.
+- [Releasing](releasing.md): release-please, the draft release, retrying a failed build, and the
+  manual PyPI step.
 
 ## Design notes
 

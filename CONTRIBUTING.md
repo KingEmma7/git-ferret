@@ -49,8 +49,9 @@ above. `--no-sync` uses the environment that is already there instead of resolvi
 ## Documentation
 
 Update `README.md` when user-facing behaviour changes. The README is the user manual; put the
-development workflow in `docs/development.md` and troubleshooting in `docs/troubleshooting.md`. The
-design notes under `docs/superpowers/` are historical records, not a second manual.
+development workflow in `docs/development.md`, troubleshooting in `docs/troubleshooting.md`, and
+release steps in `docs/releasing.md`. The design notes under `docs/superpowers/` are historical
+records, not a second manual.
 
 Every Python file under `git_ferret/`, `tests/`, and `scripts/` starts with the SPDX header:
 

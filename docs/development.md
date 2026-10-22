@@ -94,8 +94,8 @@ on every commit, so its edge cases are worth covering.
 
 The merge gate in `.github/workflows/ci.yml` requires lint, type-check, the cross-platform test job,
 coverage, build, and audit. Dependency review is a separate check and is meant to be required in the
-repository ruleset as well. release-please is the only release path; do not hand-edit versions or
-tags.
+repository ruleset as well. Release automation is described in the [releasing runbook](releasing.md);
+release-please is the only release path, so do not hand-edit versions or tags.
 
 The compatibility canary runs the suite weekly on the newest stable Python and the newest git. It is
 not a merge gate and never runs on a pull request; a failure opens or updates a single issue with the

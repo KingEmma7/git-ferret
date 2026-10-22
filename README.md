@@ -442,7 +442,8 @@ before opening your first pull request.
 
 CI runs the same checks on Python 3.14 on Linux, macOS, and Windows, plus coverage, a wheel build
 with a CLI smoke test, a dependency review, and a `pip-audit` scan. Releases are cut by
-release-please from Conventional Commits.
+release-please from Conventional Commits; the [releasing runbook](docs/releasing.md) covers the flow
+and how to retry a failed build.
 
 ## Documentation
 
@@ -450,6 +451,7 @@ release-please from Conventional Commits.
 - [AGENTS.md](AGENTS.md): the same contract for AI agents working in this repository.
 - [Troubleshooting](docs/troubleshooting.md): install, fetch, shallow-clone, and console problems.
 - [Development](docs/development.md): the local workflow, Make targets, hooks, and tests.
+- [Releasing](docs/releasing.md): release-please, the draft release, and how to retry a build.
 - [Documentation index](docs/README.md): all project documents, including the design notes.
 
 ## Licence

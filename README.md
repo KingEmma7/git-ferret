@@ -209,6 +209,16 @@ $ git-ferret remote ~/src --author you@example.com
 $ git-ferret remote ~/src --branch ABC-123
 ```
 
+For `remote` and `merged`, repeat `--branch` or separate patterns with commas:
+
+```console
+$ git-ferret remote ~/src --branch ABC-123 --branch DEF-456
+$ git-ferret merged ~/src --branch "ABC-123,DEF-456"
+```
+
+A branch matches any pattern, and the author filter still applies. Blank patterns are ignored;
+if all patterns are blank, no branch-name filter is applied.
+
 ### `merged`: which remote branches are already in main?
 
 Remote branches whose changes are fully present in the base branch, marked as deletion candidates or

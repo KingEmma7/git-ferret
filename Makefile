@@ -5,7 +5,7 @@ SOURCES := git_ferret tests scripts
 # group cannot be added to pyproject.toml and forgotten here.
 EXTRAS := audit,build,lint,test,type
 
-.PHONY: help install format format-check lint lint-fix check-spdx typecheck test coverage build audit clean check ci
+.PHONY: help install hooks format format-check lint lint-fix check-spdx typecheck test coverage build audit clean check ci
 
 help: ## Show this help
 	@echo "Usage: make <target>"
@@ -14,6 +14,9 @@ help: ## Show this help
 
 install: ## Install the package and dev tools (editable)
 	$(PYTHON) -m pip install -e ".[$(EXTRAS)]"
+
+hooks: ## Use the checked-in git hooks for this repository only
+	git config --local core.hooksPath .githooks
 
 format: ## Format the code with ruff
 	$(PYTHON) -m ruff format $(SOURCES)

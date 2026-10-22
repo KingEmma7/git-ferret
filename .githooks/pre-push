@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Fran
+# SPDX-License-Identifier: GPL-3.0-only
+# Run the two checks that are slow enough to be worth deferring, but cheap
+# enough that a push should not discover them in CI first.
+
+set -euo pipefail
+source "$(dirname "$0")/common.sh"
+
+run_global_hook pre-push "$@"
+
+python=$(python_bin)
+make typecheck test PYTHON="$python"

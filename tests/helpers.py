@@ -76,7 +76,7 @@ def clone_local(src: Path, dest: Path, depth: int | None = None) -> Path:
     "Author identity unknown".
     """
     dest.parent.mkdir(parents=True, exist_ok=True)
-    url = f"file://{src.resolve()}"
+    url = src.resolve().as_uri()
     args = ["clone"]
     if depth is not None:
         args += ["--depth", str(depth)]

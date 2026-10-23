@@ -33,7 +33,7 @@ def is_submodule(path: Path) -> bool:
     if not dot_git.is_file():
         return False
     try:
-        content = dot_git.read_text().strip()
+        content = dot_git.read_text(encoding="utf-8").strip()
     except OSError:
         return False
     if not content.startswith("gitdir:"):
@@ -42,7 +42,13 @@ def is_submodule(path: Path) -> bool:
     resolved = Path(target)
     if not resolved.is_absolute():
         resolved = (path / resolved).resolve()
-    return ".git/modules/" in f"{resolved}/" or "/.git/modules" in f"{resolved}"
+    # Path components, not a string containing "/.git/modules/": Windows
+    # writes backslashes, and a directory merely named "modules" is not a
+    # submodule's git directory.
+    parts = resolved.parts
+    return any(
+        parts[index] == ".git" and parts[index + 1] == "modules" for index in range(len(parts) - 1)
+    )
 
 
 def _gitdir_target(path: Path) -> Path | None:
@@ -57,7 +63,7 @@ def _gitdir_target(path: Path) -> Path | None:
     if not dot_git.is_file():
         return None
     try:
-        content = dot_git.read_text().strip()
+        content = dot_git.read_text(encoding="utf-8").strip()
     except OSError:
         return None
     if not content.startswith("gitdir:"):

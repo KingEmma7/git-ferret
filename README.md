@@ -4,7 +4,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/fran2889/git-ferret)](https://github.com/fran2889/git-ferret/releases)
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
-Audit many local git repositories at once, and find the branches you can delete.
+Read-only reporting tool for auditing many local git repositories.
 
 Keep twenty or thirty repositories in one directory and the state rots quietly: branches pushed
 long ago and forgotten, upstream branches deleted server-side, work abandoned on a branch from four
@@ -54,6 +54,22 @@ Needs Python 3.14 or newer, and `git` on your `PATH`.
 
 ### From a checkout
 
+With [uv](https://docs.astral.sh/uv/), one command builds an environment from the committed
+lockfile:
+
+```console
+$ git clone https://github.com/fran2889/git-ferret
+$ cd git-ferret
+$ uv sync --locked
+$ uv run git-ferret --help
+```
+
+`uv sync --locked` installs the runtime dependencies and the package in editable mode, and fails if
+`uv.lock` no longer matches `pyproject.toml`. Add `--all-extras`, or run `make sync`, to install
+the tools behind `make check` as well.
+
+The pip route works too:
+
 ```console
 $ cd path/to/git-ferret
 $ python3 -m venv .venv
@@ -62,13 +78,12 @@ $ pip install -e .
 $ git-ferret --help
 ```
 
-On Windows the activation is `.venv\Scripts\activate`.
+On Windows the activation is `.venv\Scripts\activate`. `-e` installs in editable mode, so the
+command runs the code in your checkout and edits take effect without reinstalling. Drop it for a
+plain install, which copies the code into the environment.
 
-`-e` installs in editable mode, so the command runs the code in your checkout and edits take effect
-without reinstalling. Drop it for a plain install, which copies the code into the environment.
-
-To get the test suite and the tools behind `make check` as well, ask for the extras
-individually or let the Makefile install all of them at once:
+To get the test suite and the tools behind `make check` as well, ask for the extras individually or
+let the Makefile install all of them at once:
 
 ```console
 $ pip install -e ".[test,type,lint]"   # just the checks
@@ -77,18 +92,22 @@ $ make install                          # every extra, the same set the pipeline
 
 If `python3 -m venv` fails with `ensurepip is not available`, your Python is missing the venv module,
 on Debian and Ubuntu that is `apt install python3.14-venv`, matching your version. The environment has
-to be rebuilt afterwards. The uv route below avoids needing it at all.
+to be rebuilt afterwards. The uv route above avoids needing it at all.
 
-### With uv
+### Without a checkout
 
-[uv](https://docs.astral.sh/uv/) builds the same environment in one step, without touching the system
-Python:
+`uvx` runs the package straight from the repository into uv's cache, which is the quickest way to
+try it:
 
 ```console
-$ cd path/to/git-ferret
-$ uv venv
-$ uv pip install -e .
-$ .venv/bin/git-ferret --help
+$ uvx --from git+https://github.com/fran2889/git-ferret git-ferret --version
+```
+
+The first run downloads the package and its dependencies; later runs reuse the cache. `pipx` is the
+equivalent if you already use it:
+
+```console
+$ pipx install git+https://github.com/fran2889/git-ferret
 ```
 
 ### Without a virtual environment
@@ -115,7 +134,7 @@ $ source .venv/bin/activate
 $ git-ferret local ~/src                    # once activated
 ```
 
-With [uv](https://docs.astral.sh/uv/) you need no environment of your own:
+With uv you need no environment of your own:
 
 ```console
 $ uv run git-ferret local ~/src                    # editable install in .venv
@@ -350,6 +369,8 @@ $ git-ferret local ~/src > report.md
 
 No ANSI escapes and no tables ever reach the file. Emoji are decorative only: the bracketed
 marker always carries the meaning on its own, so a terminal without an emoji font loses nothing.
+Git output is decoded as UTF-8 regardless of the console code page, and a glyph the destination
+cannot encode is replaced rather than failing the run.
 
 | Marker | Meaning |
 |---|---|
@@ -391,12 +412,25 @@ $ diff ~/reports/yesterday.md ~/reports/today.md
 
 ## Development
 
-Install the package with the dev tools, then run the checks:
+Install the package with the dev tools, then run the checks. With uv, one command builds the
+environment from the lockfile:
 
 ```console
-$ make install
-$ make check
+$ make sync
+$ make hooks
+$ make check PYTHON=.venv/bin/python
 ```
+
+`make sync` is `uv sync --all-extras --locked`. The `PYTHON` override points the Makefile at that
+environment without requiring it to be active; once `.venv` is active, plain `make check` finds the
+tools. The pip route still works: run `make install` in place of `make sync`, activate the
+environment, then run `make hooks` and `make check`.
+
+`make hooks` points this repository at the checked-in `.githooks`. It sets
+`core.hooksPath` locally, so commits and pushes run the project's checks and
+Conventional Commits validation; it does not change your global git
+configuration. A Python file with unstaged changes is refused rather than
+staged whole.
 
 `make check` runs formatting, linting, the SPDX header check, type checking, and the test suite. The individual targets:
 
@@ -410,6 +444,8 @@ $ make check
 | `make coverage` | Run the suite and write HTML and XML coverage reports |
 | `make build` | Build the sdist and wheel in `dist/` |
 | `make audit` | Scan dependencies for known vulnerabilities with `pip-audit` |
+| `make hooks` | Point this repository at the checked-in `.githooks` |
+| `make sync` | Install every extra from `uv.lock`, failing if it is stale |
 | `make clean` | Remove build artifacts and caches |
 
 `make ci` runs everything the pipeline runs: the checks above plus `coverage`, `build`, and

@@ -38,11 +38,17 @@ def run_git(repo: Path, *args: str, check: bool = False) -> CompletedProcess:
     ``check=False`` a non-zero exit is returned rather than raised, which lets
     callers ask git questions whose answer *is* the exit code.
     """
+    # UTF-8 explicitly, not the locale default: on Windows the default is the
+    # console code page, which turns a branch name such as "café" into a
+    # UnicodeDecodeError even though git wrote valid UTF-8. ``errors="replace"``
+    # keeps a genuinely undecodable path from stopping the whole scan.
     proc = subprocess.run(
         ["git", "-C", str(repo), *args],
         check=False,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         timeout=TIMEOUT_SECONDS,
     )
     if check and proc.returncode != 0:

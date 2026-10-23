@@ -11,22 +11,25 @@ updates:
       cooldown:
           default-days: 10
 
-    - package-ecosystem: pip
+    # `uv` rather than `pip`: the lockfile is what CI verifies, and a pip-only
+    # bump would leave uv.lock stale so every automated pull request failed
+    # `uv sync --locked`.
+    - package-ecosystem: uv
       directory: /
       schedule:
           interval: weekly
       groups:
-          pip-patch:
+          uv-patch:
               patterns:
                   - '*'
               update-types:
                   - patch
-          pip-minor:
+          uv-minor:
               patterns:
                   - '*'
               update-types:
                   - minor
-          pip-major:
+          uv-major:
               patterns:
                   - '*'
               update-types:
